@@ -28,7 +28,6 @@ class TimerPage extends StatelessWidget {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return Scaffold(
-      // backgroundColor: const Color.fromARGB(255, 28, 30, 33),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
