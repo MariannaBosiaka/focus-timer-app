@@ -16,7 +16,7 @@ class TimerPage extends StatelessWidget {
     final timer = Provider.of<TimerController>(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Pomodoro Timer')),
+      backgroundColor: Color.fromARGB(255, 28, 30, 33),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -24,6 +24,7 @@ class TimerPage extends StatelessWidget {
             Text(
                 formatTime(timer.remainingSeconds),
                 style: const TextStyle(
+                  color: Color(0xFFF8FAF9),
                   fontSize: 72,
                   fontWeight: FontWeight.w700,
                   fontFamily: 'Inter',
@@ -41,11 +42,6 @@ class TimerPage extends StatelessWidget {
                 ElevatedButton(
                   onPressed: timer.isRunning ? timer.pause : null,
                   child: const Text('Pause'),
-                ),
-                const SizedBox(width: 16),
-                ElevatedButton(
-                  onPressed: timer.reset,
-                  child: const Text('Reset'),
                 ),
               ],
             ),
