@@ -17,7 +17,7 @@ class TimerPage extends StatelessWidget {
   String buttonText(TimerController timer) {
     if (timer.isRunning) {
       return 'Pause';
-    } else if (timer.remainingSeconds != TimerController.initialSeconds) {
+    } else if (timer.remainingSeconds != timer.initialSeconds) {
       return 'Resume';
     } else {
       return 'Start';
@@ -65,7 +65,7 @@ class TimerPage extends StatelessWidget {
                 },
                 child: Text(
                   formatTime(timer.remainingSeconds),
-                  style: Theme.of(context).textTheme.displayLarge,
+                  style: Theme.of(context).textTheme.displayLarge!.copyWith(fontSize: 80),
                 ),
               ),
             const SizedBox(height: 15),
@@ -87,7 +87,7 @@ class TimerPage extends StatelessWidget {
             ),
             SizedBox(
               height: 60, 
-              child: timer.remainingSeconds != TimerController.initialSeconds
+              child: timer.remainingSeconds != timer.initialSeconds
                   ? IconButton(
                       onPressed: timer.reset,
                       icon: const Icon(Icons.refresh),

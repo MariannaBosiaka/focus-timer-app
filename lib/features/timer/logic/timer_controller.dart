@@ -2,12 +2,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 class TimerController extends ChangeNotifier {
-  static const int initialSeconds = 1500;
-  int _remainingSeconds = initialSeconds;
+  int _initialSeconds = 1500;
+  int _remainingSeconds = 1500;
   Timer? _timer;
   bool _isRunning = false;
 
   int get remainingSeconds => _remainingSeconds;
+  int get initialSeconds => _initialSeconds;
   bool get isRunning => _isRunning;
 
   void start() {
@@ -40,11 +41,12 @@ class TimerController extends ChangeNotifier {
   void reset() {
     _timer?.cancel();
     _isRunning = false;
-    _remainingSeconds = initialSeconds;
+    _remainingSeconds = _initialSeconds;
     notifyListeners();
   }
 
   void setDuration(Duration duration) {
+    _initialSeconds = duration.inSeconds;
     _remainingSeconds = duration.inSeconds;
     _timer?.cancel();
     _isRunning = false;

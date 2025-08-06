@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../logic/timer_controller.dart';
 import '../../../../themes/colors.dart';
+import '../widgets/timer_slider.dart';
 
 class SetTimerPage extends StatefulWidget {
   final int initialMinutes;
@@ -30,6 +31,7 @@ class _SetTimerPageState extends State<SetTimerPage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
+        automaticallyImplyLeading: false,
         elevation: 0,
       ),
       body: Center(
@@ -41,30 +43,14 @@ class _SetTimerPageState extends State<SetTimerPage> {
               style: Theme.of(context).textTheme.displayLarge!.copyWith(fontSize: 100),
             ),
             const SizedBox(height: 80),
-            SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                activeTickMarkColor: Colors.transparent,
-                activeTrackColor: lightAppBackground,
-                inactiveTrackColor: Colors.transparent,
-                thumbColor: lightAppBackground,
-                overlayColor: Colors.transparent, 
-                overlayShape: const RoundSliderOverlayShape(overlayRadius: 0), 
-                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
-                trackHeight: 4,
-              ),
-              child: Slider(
-                value: _minutes.toDouble(),
-                min: 5,
-                max: 180,
-                divisions: 35,
-                label: null, // no label popup
+            TimerSlider(
+                initialMinutes: _minutes,
                 onChanged: (value) {
                   setState(() {
-                    _minutes = value.round();
+                    _minutes = value;
                   });
                 },
               ),
-            ),
             const SizedBox(height: 30),
             TextButton(
               onPressed: () {
