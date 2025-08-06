@@ -13,16 +13,21 @@ class TimerController extends ChangeNotifier {
   void start() {
     if (_isRunning) return;
 
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_remainingSeconds > 0) {
-        _remainingSeconds--;
-        notifyListeners();
-      } else {
-        pause(); // or reset(); depending on your goal
-      }
-    });
-
     _isRunning = true;
+    notifyListeners();
+
+    _tick();
+
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
+  }
+
+  void _tick() {
+    if (_remainingSeconds > 0) {
+      _remainingSeconds--;
+    } else {
+      _timer?.cancel();
+      _isRunning = false;
+    }
     notifyListeners();
   }
 
@@ -36,6 +41,13 @@ class TimerController extends ChangeNotifier {
     _timer?.cancel();
     _isRunning = false;
     _remainingSeconds = initialSeconds;
+    notifyListeners();
+  }
+
+  void setDuration(Duration duration) {
+    _remainingSeconds = duration.inSeconds;
+    _timer?.cancel();
+    _isRunning = false;
     notifyListeners();
   }
 

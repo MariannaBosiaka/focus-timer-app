@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:focus_timer_app/features/timer/ui/pages/set_timer_page.dart';
 import 'package:provider/provider.dart';
 import '../../logic/timer_controller.dart';
-import '../../logic/theme_provider.dart';  // import ThemeProvider here
+import '../../logic/theme_provider.dart';  
+
 
 class TimerPage extends StatelessWidget {
   const TimerPage({Key? key}) : super(key: key);
@@ -53,14 +55,19 @@ class TimerPage extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              formatTime(timer.remainingSeconds),
-              style: const TextStyle(
-                fontSize: 72,
-                fontWeight: FontWeight.w700,
-                fontFamily: 'Inter',
+            GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => SetTimerPage(initialMinutes: timer.remainingSeconds ~/ 60,),
+                    ),
+                  );
+                },
+                child: Text(
+                  formatTime(timer.remainingSeconds),
+                  style: Theme.of(context).textTheme.displayLarge,
+                ),
               ),
-            ),
             const SizedBox(height: 15),
             TextButton(
               onPressed: () {
@@ -78,19 +85,18 @@ class TimerPage extends StatelessWidget {
               ),
               child: Text(buttonText(timer)),
             ),
-            if (timer.remainingSeconds != TimerController.initialSeconds)
-              const SizedBox(height: 10),
-            if (timer.remainingSeconds != TimerController.initialSeconds)
-              TextButton(
-                onPressed: timer.reset,
-                style: TextButton.styleFrom(
-                  fixedSize: const Size(75, 45),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                child: const Text('Reset'),
-              ),
+            SizedBox(
+              height: 60, 
+              child: timer.remainingSeconds != TimerController.initialSeconds
+                  ? IconButton(
+                      onPressed: timer.reset,
+                      icon: const Icon(Icons.refresh),
+                      tooltip: 'Reset Timer',
+                      color: Theme.of(context).iconTheme.color,
+                      iconSize: 30,
+                    )
+                  : null,
+            ),
           ],
         ),
       ),
