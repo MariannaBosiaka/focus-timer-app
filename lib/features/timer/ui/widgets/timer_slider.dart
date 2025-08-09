@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class SnappingScrollPhysics extends ScrollPhysics {
   final double itemExtent;
 
-  const SnappingScrollPhysics({required this.itemExtent, ScrollPhysics? parent}) : super(parent: parent);
+  const SnappingScrollPhysics({required this.itemExtent, super.parent});
 
   @override
   SnappingScrollPhysics applyTo(ScrollPhysics? ancestor) {
