@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:focus_timer_app/features/timer/ui/pages/set_timer_page.dart';
 import 'package:provider/provider.dart';
 import '../../logic/timer_controller.dart';
-import '../../logic/theme_provider.dart';  
+import '../../logic/theme_provider.dart'; 
+import '../widgets/mode_selector.dart'; 
 
 
 class TimerPage extends StatelessWidget {
@@ -52,9 +53,31 @@ class TimerPage extends StatelessWidget {
         ],
       ),
       body: Center(
-        child: Column(
+        child: 
+        Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            const SizedBox(height: 30),
+            Positioned(
+                top: 40,
+                left: 0,
+                right: 0,
+                child:ModeSelector(
+                onModeChanged: (index) {
+                    switch (index) {
+                      case 0:
+                        timer.setDuration(const Duration(minutes: 25));
+                        break;
+                      case 1:
+                        timer.setDuration(const Duration(minutes: 5));
+                        break;
+                      case 2:
+                        timer.setDuration(const Duration(minutes: 15));
+                        break;
+                  };
+                },
+              ),
+              ),
             GestureDetector(
                 onTap: () {
                   Navigator.push(
@@ -68,6 +91,7 @@ class TimerPage extends StatelessWidget {
                   style: Theme.of(context).textTheme.displayLarge!.copyWith(fontSize: 80),
                 ),
               ),
+
             const SizedBox(height: 15),
             TextButton(
               onPressed: () {

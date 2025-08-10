@@ -42,6 +42,17 @@ class _ModeSelectorState extends State<ModeSelector> {
 
           widget.onModeChanged(newIndex);
         },
+        onTapUp: (details) {
+          final localX = details.localPosition.dx;
+          final tappedIndex = (localX / buttonWidth).floor().clamp(0, _modes.length - 1);
+
+          setState(() {
+            _selectedIndex = tappedIndex;
+            _dragOffset = 0;
+          });
+
+          widget.onModeChanged(tappedIndex);
+        },
         child: Container(
           height: 50,
           decoration: BoxDecoration(
@@ -51,7 +62,10 @@ class _ModeSelectorState extends State<ModeSelector> {
           child: Stack(
             children: [
               AnimatedAlign(
-                alignment: Alignment(-1 + (_selectedIndex * 1.0) + (_dragOffset / buttonWidth), 0),
+                alignment: Alignment(
+                  -1 + (_selectedIndex * 1.0) + (_dragOffset / buttonWidth),
+                  0,
+                ),
                 duration: const Duration(milliseconds: 200),
                 curve: Curves.easeOut,
                 child: Container(
