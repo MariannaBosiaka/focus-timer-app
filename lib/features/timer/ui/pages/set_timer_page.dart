@@ -7,8 +7,9 @@ import '../widgets/mode_selector.dart';
 
 class SetTimerPage extends StatefulWidget {
   final int initialMinutes;
+  final int selectedMode; 
 
-  const SetTimerPage({super.key, required this.initialMinutes});
+  const SetTimerPage({super.key, required this.initialMinutes, required this.selectedMode});
 
   @override
   State<SetTimerPage> createState() => _SetTimerPageState();
@@ -33,6 +34,7 @@ class _SetTimerPageState extends State<SetTimerPage> {
   void initState() {
     super.initState();
     _minutes = widget.initialMinutes;
+    _mode = widget.selectedMode;  // initialize mode to passed mode
   }
 
   @override
@@ -74,6 +76,7 @@ class _SetTimerPageState extends State<SetTimerPage> {
                     left: 0,
                     right: 0,
                     child:ModeSelector(
+                    selectedMode: _mode,
                     onModeChanged: (index) {
                       setState(() {
                         _mode = index;
@@ -95,7 +98,7 @@ class _SetTimerPageState extends State<SetTimerPage> {
                 const SizedBox(height: 50),
                 TextButton(
                   onPressed: () {
-                    timer.setDuration(Duration(minutes: _minutes));
+                    timer.updateDurationForMode(_mode, Duration(minutes: _minutes));
                     Navigator.pop(context);
                   },
                   style: TextButton.styleFrom(

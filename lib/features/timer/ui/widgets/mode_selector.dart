@@ -1,93 +1,69 @@
 import 'package:flutter/material.dart';
 
-class ModeSelector extends StatefulWidget {
+class ModeSelector extends StatelessWidget {
+  final int selectedMode;
   final ValueChanged<int> onModeChanged;
 
-  const ModeSelector({super.key, required this.onModeChanged});
-
-  @override
-  State<ModeSelector> createState() => _ModeSelectorState();
-}
-
-class _ModeSelectorState extends State<ModeSelector> {
-  int _selectedIndex = 0;
-  final List<String> _modes = ["Focus", "Short Break", "Long Break"];
-  double _dragOffset = 0.0;
+  const ModeSelector({
+    Key? key,
+    required this.selectedMode,
+    required this.onModeChanged,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final buttonWidth = (MediaQuery.of(context).size.width - 48) / _modes.length;
+    final modes = ['Focus', 'Short Break', 'Long Break'];
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0),
-      child: GestureDetector(
-        onHorizontalDragUpdate: (details) {
-          final buttonWidth = (MediaQuery.of(context).size.width - 48) / _modes.length;
-          final maxOffset = (_modes.length - 1 - _selectedIndex) * buttonWidth;
-          final minOffset = -_selectedIndex * buttonWidth;
+    return SizedBox(
+      height: 40,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final totalWidth = constraints.maxWidth;
+          final segmentWidth = totalWidth / modes.length;
 
-          setState(() {
-            _dragOffset += details.delta.dx;
-            _dragOffset = _dragOffset.clamp(minOffset, maxOffset);
-          });
-        },
-        onHorizontalDragEnd: (_) {
-          final int draggedIndex = (_dragOffset / buttonWidth).round();
-          final newIndex = (_selectedIndex + draggedIndex).clamp(0, _modes.length - 1);
-
-          setState(() {
-            _selectedIndex = newIndex;
-            _dragOffset = 0;
-          });
-
-          widget.onModeChanged(newIndex);
-        },
-        onTapUp: (details) {
-          final localX = details.localPosition.dx;
-          final tappedIndex = (localX / buttonWidth).floor().clamp(0, _modes.length - 1);
-
-          setState(() {
-            _selectedIndex = tappedIndex;
-            _dragOffset = 0;
-          });
-
-          widget.onModeChanged(tappedIndex);
-        },
-        child: Container(
-          height: 50,
-          decoration: BoxDecoration(
-            color: Colors.transparent,
-            borderRadius: BorderRadius.circular(40),
-          ),
-          child: Stack(
+          return Stack(
             children: [
-              AnimatedAlign(
-                alignment: Alignment(
-                  -1 + (_selectedIndex * 1.0) + (_dragOffset / buttonWidth),
-                  0,
-                ),
-                duration: const Duration(milliseconds: 200),
-                curve: Curves.easeOut,
+              // Animated white background moving under the selected mode
+              AnimatedPositioned(
+                left: segmentWidth * selectedMode,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                top: 0,
+                bottom: 0,
+                width: segmentWidth,
                 child: Container(
-                  width: buttonWidth,
-                  margin: const EdgeInsets.all(4),
+                  margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(30),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      )
+                    ],
                   ),
                 ),
               ),
+
+              // Row of mode buttons
               Row(
-                children: List.generate(_modes.length, (index) {
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: List.generate(modes.length, (index) {
+                  final isSelected = index == selectedMode;
+
                   return Expanded(
-                    child: Center(
-                      child: Text(
-                        _modes[index],
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: _selectedIndex == index
-                              ? Colors.black
-                              : Colors.grey[700],
+                    child: GestureDetector(
+                      onTap: () => onModeChanged(index),
+                      child: Center(
+                        child: Text(
+                          modes[index],
+                          style: TextStyle(
+                            color: isSelected ? Colors.black : Colors.white70,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            fontSize: 16,
+                          ),
                         ),
                       ),
                     ),
@@ -95,8 +71,8 @@ class _ModeSelectorState extends State<ModeSelector> {
                 }),
               ),
             ],
-          ),
-        ),
+          );
+        },
       ),
     );
   }
