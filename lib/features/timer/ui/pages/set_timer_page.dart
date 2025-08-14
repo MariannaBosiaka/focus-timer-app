@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../logic/timer_controller.dart';
-import '../../../../themes/colors.dart';
 import '../widgets/timer_slider.dart';
 import '../widgets/mode_selector.dart';
 

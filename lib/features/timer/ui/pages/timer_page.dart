@@ -169,7 +169,7 @@ class _TimerPageState extends State<TimerPage> {
                     style: Theme.of(context)
                         .textTheme
                         .displayLarge!
-                        .copyWith(fontSize: 80),
+                        .copyWith(fontSize: 85),
                   ),
                 ),
 
@@ -186,12 +186,17 @@ class _TimerPageState extends State<TimerPage> {
                   },
                   style: TextButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 12),
+                        horizontal: 35, vertical: 13),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(50),
                     ),
                   ),
-                  child: Text(buttonText(timer)),
+                  child: Text(
+                    buttonText(timer),
+                    style: const TextStyle(
+                      fontSize: 17,
+                    ),
+                  ),
                 ),
 
                 // Reset Button
