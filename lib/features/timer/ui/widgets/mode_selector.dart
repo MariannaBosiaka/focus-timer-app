@@ -5,10 +5,10 @@ class ModeSelector extends StatelessWidget {
   final ValueChanged<int> onModeChanged;
 
   const ModeSelector({
-    Key? key,
+    super.key,
     required this.selectedMode,
     required this.onModeChanged,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +23,6 @@ class ModeSelector extends StatelessWidget {
 
           return Stack(
             children: [
-              // Animated white background moving under the selected mode
               AnimatedPositioned(
                 left: segmentWidth * selectedMode,
                 duration: const Duration(milliseconds: 300),

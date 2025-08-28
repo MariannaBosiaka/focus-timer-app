@@ -7,7 +7,7 @@ import '../pages/set_timer_page.dart';
 import '../pages/to_do_page.dart';
 
 class TimerPage extends StatefulWidget {
-  const TimerPage({Key? key}) : super(key: key);
+  const TimerPage({super.key});
 
   @override
   State<TimerPage> createState() => _TimerPageState();

@@ -5,10 +5,10 @@ class SwipeModeMainTimer extends StatelessWidget {
   final ValueChanged<int> onModeChanged;
 
   const SwipeModeMainTimer({
-    Key? key,
+    super.key,
     required this.selectedMode,
     required this.onModeChanged,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
