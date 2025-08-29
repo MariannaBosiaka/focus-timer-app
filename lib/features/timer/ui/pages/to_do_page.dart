@@ -37,7 +37,6 @@ class _TodoPageState extends State<TodoPage> {
 
   void _editTaskDialog(int index) {
     String updatedTitle = _tasks[index]['title'];
-    String? updatedTime = _tasks[index]['time'];
 
     showDialog(
       context: context,
@@ -67,97 +66,192 @@ class _TodoPageState extends State<TodoPage> {
               ),
 
               const SizedBox(height: 16),
-
-              // Planned time
-              TextField(
-                controller: TextEditingController(text: updatedTime),
-                style: TextStyle(
-                  color: Theme.of(context).textTheme.bodyLarge!.color,
-                ),
-                decoration: InputDecoration(
-                  labelText: "Planned time (e.g. 14:30)",
-                  labelStyle: TextStyle(color: Theme.of(context).hintColor),
-                ),
-                onChanged: (value) => updatedTime = value,
-              ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _tasks[index]['title'] = updatedTitle;
-                  _tasks[index]['time'] = updatedTime;
-                });
-                Navigator.pop(context);
-              },
-              child: const Text("Save"),
-            ),
-          ],
         );
       },
     );
   }
 
-  void _addTaskDialog() {
-    String newTask = '';
-    showDialog(
+    void _addTaskBottomSheet() {
+    final TextEditingController taskController = TextEditingController();
+    int newPomodoros = 0;
+
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        title: Text(
-          "Add Task",
-          style: TextStyle(
-            color: Theme.of(context).textTheme.bodyLarge!.color,
-          ),
-        ),
-        content: TextField(
-          autofocus: true,
-          style: TextStyle(
-            color: Theme.of(context).textTheme.bodyLarge!.color,
-          ),
-          decoration: InputDecoration(
-            hintText: "Enter task name",
-            hintStyle: TextStyle(color: Theme.of(context).hintColor),
-          ),
-          onChanged: (value) => newTask = value,
-          onSubmitted: (_) {
-            if (newTask.trim().isNotEmpty) {
-              _addTask(newTask);
-              Navigator.pop(context);
-            }
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              "Cancel",
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.secondary,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primary,
-            ),
-            onPressed: () {
-              if (newTask.trim().isNotEmpty) {
-                _addTask(newTask);
-                Navigator.pop(context);
-              }
-            },
-            child: const Text("Add"),
-          ),
-        ],
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
       ),
+      builder: (context) {
+        final fieldColor = Theme.of(context).brightness == Brightness.light
+            ? const Color.fromARGB(255, 243, 243, 243)
+            : Colors.grey[850];
+
+        return StatefulBuilder(
+          builder: (context, setStateBottomSheet) {
+            return FractionallySizedBox(
+              heightFactor: 0.7,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
+                child: Container(
+                  color: Colors.white,
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Add New Task",
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).textTheme.bodyLarge!.color,
+                        ),
+                      ),
+                      const SizedBox(height: 25),
+
+                      // Task Title
+                      Text(
+                        "Task Title",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).brightness == Brightness.light
+                              ? Colors.black
+                              : Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: fieldColor,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        constraints: const BoxConstraints(minHeight: 60),
+                        child: TextField(
+                          controller: taskController,
+                          autofocus: true,
+                          style: TextStyle(
+                            color: Theme.of(context).textTheme.bodyLarge!.color,
+                          ),
+                          decoration: const InputDecoration(
+                            border: InputBorder.none,
+                            hintText: "Enter task name",
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(vertical: 18),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Pomodoro Stepper in the same row as title
+                      Row(
+                        children: [
+                          Text(
+                            "Pomodoro Sessions",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).brightness == Brightness.light
+                                  ? Colors.black
+                                  : Colors.white,
+                            ),
+                          ),
+                          const SizedBox(width: 20),
+                          // Minus button
+                          GestureDetector(
+                            onTap: () {
+                              setStateBottomSheet(() {
+                                if (newPomodoros > 0) newPomodoros--;
+                              });
+                            },
+                            child: Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: fieldColor,
+                              ),
+                              padding: const EdgeInsets.all(8),
+                              child: const Icon(Icons.remove, size: 20),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          // Current number
+                          Text(
+                            "$newPomodoros",
+                            style: const TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(width: 12),
+                          // Plus button
+                          GestureDetector(
+                            onTap: () {
+                              setStateBottomSheet(() {
+                                if (newPomodoros < 99) newPomodoros++;
+                              });
+                            },
+                            child: Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: fieldColor,
+                              ),
+                              padding: const EdgeInsets.all(8),
+                              child: const Icon(Icons.add, size: 20),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const Spacer(),
+
+                      // Centered Add Task button
+                      Center(
+                        child: TextButton(
+                          onPressed: () {
+                            final taskText = taskController.text.trim();
+                            if (taskText.isNotEmpty) {
+                              // Update main page state
+                              setState(() {
+                                _tasks.add({
+                                  'title': taskText,
+                                  'done': false,
+                                  'pomodoros': newPomodoros,
+                                  'donePomodoros': 0,
+                                });
+                              });
+                              Navigator.pop(context); // close bottom sheet
+                            }
+                          },
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 30,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(50),
+                            ),
+                          ),
+                          child: const Text(
+                            "Add Task",
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
+
 
   List<List<DateTime>> _generateWeeks() {
     List<List<DateTime>> weeks = [];
@@ -193,267 +287,296 @@ class _TodoPageState extends State<TodoPage> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Align(
-              alignment: Alignment.topLeft,
-              child: Text(
-                _currentMonth(),
-                style: TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).textTheme.bodyLarge!.color,
+        title: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Align(
+                alignment: Alignment.topLeft,
+                child: Text(
+                  _currentMonth(),
+                  style: TextStyle(
+                    fontSize: 36,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).textTheme.bodyLarge!.color,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 8),
-          ],
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
       body: Stack(
         children: [
-          Column(
-            children: [
-              // Week horizontal scroll
-              SizedBox(
-                height: 80,
-                child: PageView.builder(
-                  controller: PageController(viewportFraction: 0.95),
-                  itemCount: _weeks.length,
-                  onPageChanged: (index) {
-                    setState(() {
-                      _currentWeekIndex = index;
-                    });
-                  },
-                  itemBuilder: (context, index) {
-                    final week = _weeks[index];
-                    return Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: week.map((day) {
-                        final isSelected =
-                            day.day == _selectedDate.day &&
-                            day.month == _selectedDate.month;
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Column(
+              children: [
+                // Week horizontal scroll
+                SizedBox(
+                  height: 80,
+                  child: PageView.builder(
+                    controller: PageController(viewportFraction: 0.95),
+                    itemCount: _weeks.length,
+                    onPageChanged: (index) {
+                      setState(() {
+                        _currentWeekIndex = index;
+                      });
+                    },
+                    itemBuilder: (context, index) {
+                      final week = _weeks[index];
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children:
+                            week.map((day) {
+                              final isSelected =
+                                  day.day == _selectedDate.day &&
+                                  day.month == _selectedDate.month;
 
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _selectedDate = day;
-                            });
-                          },
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                DateFormat('E').format(day)[0],
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
+                              return GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _selectedDate = day;
+                                  });
+                                },
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      DateFormat('E').format(day)[0],
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Container(
+                                      width: 40,
+                                      height: 40,
+                                      decoration: BoxDecoration(
+                                        color:
+                                            isSelected
+                                                ? Theme.of(
+                                                  context,
+                                                ).textTheme.bodyLarge!.color
+                                                : Colors.transparent,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        day.day.toString(),
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color:
+                                              isSelected
+                                                  ? (ThemeData.estimateBrightnessForColor(
+                                                            Theme.of(context)
+                                                                .textTheme
+                                                                .bodyLarge!
+                                                                .color!,
+                                                          ) ==
+                                                          Brightness.dark
+                                                      ? lightAppBackground
+                                                      : darkAppBackground)
+                                                  : Theme.of(
+                                                    context,
+                                                  ).textTheme.bodyLarge!.color,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              const SizedBox(height: 4),
-                              Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? Theme.of(context)
-                                          .textTheme
-                                          .bodyLarge!
-                                          .color
-                                      : Colors.transparent,
-                                  shape: BoxShape.circle,
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  day.day.toString(),
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: isSelected
-                                        ? (ThemeData.estimateBrightnessForColor(
-                                                  Theme.of(context)
-                                                      .textTheme
-                                                      .bodyLarge!
-                                                      .color!,
-                                                ) ==
-                                                Brightness.dark
-                                            ? lightAppBackground
-                                            : darkAppBackground)
-                                        : Theme.of(context)
-                                            .textTheme
-                                            .bodyLarge!
-                                            .color,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    );
-                  },
+                              );
+                            }).toList(),
+                      );
+                    },
+                  ),
                 ),
-              ),
 
-              // Task list
-              Expanded(
-                child: _tasks.isEmpty
-                    ? Center(
-                        child: Text(
-                          "No tasks yet. Add something!",
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Theme.of(context).hintColor,
-                          ),
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _tasks.length,
-                        itemBuilder: (context, index) {
-                          final task = _tasks[index]; // map
-                          return Dismissible(
-                            key: Key(task['title'] + index.toString()),
-                            direction: DismissDirection.endToStart,
-                            background: Container(
-                              margin: const EdgeInsets.only(bottom: 10),
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 16),
-                              decoration: BoxDecoration(
-                                color: Colors.red,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              alignment: Alignment.centerRight,
-                              child: const Icon(
-                                Icons.delete,
-                                color: Colors.white,
+                // Task list
+                Expanded(
+                  child:
+                      _tasks.isEmpty
+                          ? Center(
+                            child: Text(
+                              "No tasks yet. Add something!",
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Theme.of(context).hintColor,
                               ),
                             ),
-                            onDismissed: (_) {
-                              setState(() {
-                                _tasks.removeAt(index);
-                              });
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text("Task deleted")),
-                              );
-                            },
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: 10),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 23,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).brightness ==
-                                        Brightness.light
-                                    ? const Color.fromARGB(255, 243, 243, 243)
-                                    : Colors.grey[850],
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                children: [
-                                  // Circular button for done/undone
-                                  GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        task['done'] = !(task['done'] as bool);
-                                      });
-                                    },
-                                    child: Container(
-                                      width: 35,
-                                      height: 35,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: Theme.of(context).hintColor,
-                                          width: 1,
-                                        ),
-                                        color: task['done']
-                                            ? Theme.of(context)
-                                                .textTheme
-                                                .bodyLarge!
-                                                .color
-                                            : Colors.transparent,
-                                      ),
-                                      child: task['done']
-                                          ? const Icon(
-                                              Icons.check,
-                                              size: 16,
-                                              color: Colors.white,
+                          )
+                          : ListView.builder(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            itemCount: _tasks.length,
+                            itemBuilder: (context, index) {
+                              final task = _tasks[index];
+                              return Dismissible(
+                                key: Key(task['title'] + index.toString()),
+                                direction: DismissDirection.endToStart,
+                                background: Container(
+                                  margin: const EdgeInsets.only(bottom: 10),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  alignment: Alignment.centerRight,
+                                  child: const Icon(
+                                    Icons.delete,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                onDismissed: (_) {
+                                  setState(() {
+                                    _tasks.removeAt(index);
+                                  });
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Task deleted"),
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  margin: const EdgeInsets.only(bottom: 10),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 23,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        Theme.of(context).brightness ==
+                                                Brightness.light
+                                            ? const Color.fromARGB(
+                                              255,
+                                              243,
+                                              243,
+                                              243,
                                             )
-                                          : null,
-                                    ),
+                                            : Colors.grey[850],
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
-                                  const SizedBox(width: 15),
-
-                                  // Task title + planned time
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          task['title'],
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                            color: Theme.of(context)
-                                                        .brightness ==
-                                                    Brightness.light
-                                                ? darkAppBackground
-                                                : lightAppBackground,
-                                            decoration: task['done']
-                                                ? TextDecoration.lineThrough
-                                                : TextDecoration.none,
+                                  child: Row(
+                                    children: [
+                                      // Circular button for done/undone
+                                      GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            task['done'] =
+                                                !(task['done'] as bool);
+                                          });
+                                        },
+                                        child: Container(
+                                          width: 35,
+                                          height: 35,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color:
+                                                  Theme.of(context).hintColor,
+                                              width: 1,
+                                            ),
+                                            color:
+                                                task['done']
+                                                    ? Theme.of(
+                                                      context,
+                                                    ).textTheme.bodyLarge!.color
+                                                    : Colors.transparent,
                                           ),
+                                          child:
+                                              task['done']
+                                                  ? const Icon(
+                                                    Icons.check,
+                                                    size: 16,
+                                                    color: Colors.white,
+                                                  )
+                                                  : null,
                                         ),
-                                        Text(
-                                          task['time'] ?? "No time set",
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: Theme.of(context).hintColor,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
+                                      ),
+                                      const SizedBox(width: 15),
 
-                                  // Three-dot menu
-                                  PopupMenuButton<String>(
-                                    onSelected: (value) {
-                                      if (value == 'edit') {
-                                        _editTaskDialog(index);
-                                      }
-                                    },
-                                    itemBuilder: (context) => [
-                                      const PopupMenuItem(
-                                        value: 'edit',
-                                        child: Row(
+                                      // Task title + planned time
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
-                                            Icon(Icons.edit, size: 18),
-                                            SizedBox(width: 8),
-                                            Text("Edit"),
+                                            Text(
+                                              task['title'],
+                                              style: TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.bold,
+                                                color:
+                                                  task['done']
+                                                      ? Theme.of(context).hintColor
+                                                      :
+                                                    Theme.of(
+                                                              context,
+                                                            ).brightness ==
+                                                            Brightness.light
+                                                        ? darkAppBackground
+                                                        : lightAppBackground,
+                                                decoration:
+                                                    task['done']
+                                                        ? TextDecoration
+                                                            .lineThrough
+                                                        : TextDecoration.none,
+                                              ),
+                                            ),
+                                            if (task['pomodoros'] > 0)
+                                              Padding(
+                                                padding: const EdgeInsets.only(top: 4.0),
+                                                child: Text(
+                                                  "${task['donePomodoros']}/${task['pomodoros']} sessions completed",
+                                                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                                                ),
+                                              ),
                                           ],
                                         ),
                                       ),
+
+                                      // Three-dot menu
+                                      PopupMenuButton<String>(
+                                        onSelected: (value) {
+                                          if (value == 'edit') {
+                                            _editTaskDialog(index);
+                                          }
+                                        },
+                                        itemBuilder:
+                                            (context) => [
+                                              const PopupMenuItem(
+                                                value: 'edit',
+                                                child: Row(
+                                                  children: [
+                                                    Icon(Icons.edit, size: 18),
+                                                    SizedBox(width: 8),
+                                                    Text("Edit"),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                      ),
                                     ],
                                   ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-              ),
-            ],
+                                ),
+                              );
+                            },
+                          ),
+                ),
+              ],
+            ),
           ),
 
           // Add Task button
           Align(
-            alignment: Alignment.bottomRight,
+            alignment: Alignment.bottomCenter,
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: TextButton.icon(
-                onPressed: _addTaskDialog,
+                onPressed: _addTaskBottomSheet,
                 icon: const Icon(Icons.add, size: 22),
                 label: const Text(
                   "Add Task",
