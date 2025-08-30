@@ -12,6 +12,7 @@ dependencies:
   intl: ^0.18.1
   provider: ^6.1.0
   page_transition: ^2.0.9
+  flutter_slidable: ^3.0.0
 
 dev_dependencies:
   flutter_test:

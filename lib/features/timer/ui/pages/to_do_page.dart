@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_slidable/flutter_slidable.dart'; // 👈 Add this
 import '../../../../themes/colors.dart';
 
 class TodoPage extends StatefulWidget {
@@ -10,7 +11,7 @@ class TodoPage extends StatefulWidget {
 }
 
 class _TodoPageState extends State<TodoPage> {
-  final List<Map<String, dynamic>> _tasks = []; // title + done + time
+  final List<Map<String, dynamic>> _tasks = []; // title + done + pomodoros
   List<List<DateTime>> _weeks = [];
   int _currentWeekIndex = 0;
   DateTime _selectedDate = DateTime.now();
@@ -24,58 +25,11 @@ class _TodoPageState extends State<TodoPage> {
     }
   }
 
-  void _addTask(String task) {
-    if (task.trim().isEmpty) return;
-    setState(() {
-      _tasks.add({
-        'title': task.trim(),
-        'done': false,
-        'time': null, // planned time (can be edited later)
-      });
-    });
-  }
-
-  void _editTaskDialog(int index) {
-    String updatedTitle = _tasks[index]['title'];
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          title: Text(
-            "Edit Task",
-            style: TextStyle(
-              color: Theme.of(context).textTheme.bodyLarge!.color,
-            ),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Title
-              TextField(
-                controller: TextEditingController(text: updatedTitle),
-                style: TextStyle(
-                  color: Theme.of(context).textTheme.bodyLarge!.color,
-                ),
-                decoration: InputDecoration(
-                  labelText: "Task",
-                  labelStyle: TextStyle(color: Theme.of(context).hintColor),
-                ),
-                onChanged: (value) => updatedTitle = value,
-              ),
-
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
-      },
+  void _openTaskBottomSheet({Map<String, dynamic>? task, int? index}) {
+    final TextEditingController taskController = TextEditingController(
+      text: task?['title'] ?? "",
     );
-  }
-
-    void _addTaskBottomSheet() {
-    final TextEditingController taskController = TextEditingController();
-    int newPomodoros = 0;
+    int newPomodoros = task?['pomodoros'] ?? 0;
 
     showModalBottomSheet(
       context: context,
@@ -84,26 +38,30 @@ class _TodoPageState extends State<TodoPage> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
       ),
       builder: (context) {
-        final fieldColor = Theme.of(context).brightness == Brightness.light
-            ? const Color.fromARGB(255, 243, 243, 243)
-            : Colors.grey[850];
+        final fieldColor =
+            Theme.of(context).brightness == Brightness.light
+                ? lightAppBackground
+                : darkAppBackground;
 
         return StatefulBuilder(
           builder: (context, setStateBottomSheet) {
             return FractionallySizedBox(
               heightFactor: 0.7,
               child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(40),
+                ),
                 child: Container(
                   color: Colors.white,
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(30),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      const SizedBox(height: 9),
                       Text(
-                        "Add New Task",
+                        task == null ? "Add New Task" : "Edit Task",
                         style: TextStyle(
-                          fontSize: 28,
+                          fontSize: 26,
                           fontWeight: FontWeight.bold,
                           color: Theme.of(context).textTheme.bodyLarge!.color,
                         ),
@@ -112,13 +70,14 @@ class _TodoPageState extends State<TodoPage> {
 
                       // Task Title
                       Text(
-                        "Task Title",
+                        "Title",
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: Theme.of(context).brightness == Brightness.light
-                              ? Colors.black
-                              : Colors.white,
+                          color:
+                              Theme.of(context).brightness == Brightness.light
+                                  ? Colors.black
+                                  : Colors.white,
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -137,7 +96,7 @@ class _TodoPageState extends State<TodoPage> {
                           ),
                           decoration: const InputDecoration(
                             border: InputBorder.none,
-                            hintText: "Enter task name",
+                            hintText: "Enter task title",
                             isDense: true,
                             contentPadding: EdgeInsets.symmetric(vertical: 18),
                           ),
@@ -146,21 +105,22 @@ class _TodoPageState extends State<TodoPage> {
 
                       const SizedBox(height: 20),
 
-                      // Pomodoro Stepper in the same row as title
+                      // Pomodoro Stepper
                       Row(
                         children: [
                           Text(
                             "Pomodoro Sessions",
                             style: TextStyle(
-                              fontSize: 18,
+                              fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              color: Theme.of(context).brightness == Brightness.light
-                                  ? Colors.black
-                                  : Colors.white,
+                              color:
+                                  Theme.of(context).brightness ==
+                                          Brightness.light
+                                      ? Colors.black
+                                      : Colors.white,
                             ),
                           ),
                           const SizedBox(width: 20),
-                          // Minus button
                           GestureDetector(
                             onTap: () {
                               setStateBottomSheet(() {
@@ -177,14 +137,14 @@ class _TodoPageState extends State<TodoPage> {
                             ),
                           ),
                           const SizedBox(width: 12),
-                          // Current number
                           Text(
                             "$newPomodoros",
                             style: const TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold),
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           const SizedBox(width: 12),
-                          // Plus button
                           GestureDetector(
                             onTap: () {
                               setStateBottomSheet(() {
@@ -205,22 +165,30 @@ class _TodoPageState extends State<TodoPage> {
 
                       const Spacer(),
 
-                      // Centered Add Task button
+                      // Add/Save button
                       Center(
                         child: TextButton(
                           onPressed: () {
                             final taskText = taskController.text.trim();
                             if (taskText.isNotEmpty) {
-                              // Update main page state
                               setState(() {
-                                _tasks.add({
-                                  'title': taskText,
-                                  'done': false,
-                                  'pomodoros': newPomodoros,
-                                  'donePomodoros': 0,
-                                });
+                                if (task == null) {
+                                  _tasks.add({
+                                    'title': taskText,
+                                    'done': false,
+                                    'pomodoros': newPomodoros,
+                                    'donePomodoros': 0,
+                                  });
+                                } else {
+                                  _tasks[index!] = {
+                                    'title': taskText,
+                                    'done': task['done'],
+                                    'pomodoros': newPomodoros,
+                                    'donePomodoros': task['donePomodoros'] ?? 0,
+                                  };
+                                }
                               });
-                              Navigator.pop(context); // close bottom sheet
+                              Navigator.pop(context);
                             }
                           },
                           style: TextButton.styleFrom(
@@ -232,10 +200,10 @@ class _TodoPageState extends State<TodoPage> {
                               borderRadius: BorderRadius.circular(50),
                             ),
                           ),
-                          child: const Text(
-                            "Add Task",
-                            style: TextStyle(
-                              fontSize: 17,
+                          child: Text(
+                            task == null ? "Add Task" : "Save",
+                            style: const TextStyle(
+                              fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -252,12 +220,9 @@ class _TodoPageState extends State<TodoPage> {
     );
   }
 
-
   List<List<DateTime>> _generateWeeks() {
     List<List<DateTime>> weeks = [];
     DateTime start = DateTime.now();
-
-    // align start to previous Monday
     start = start.subtract(Duration(days: start.weekday - 1));
 
     for (int i = 0; i < 52; i++) {
@@ -286,6 +251,7 @@ class _TodoPageState extends State<TodoPage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
+        toolbarHeight: 90,
         elevation: 0,
         title: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -302,8 +268,16 @@ class _TodoPageState extends State<TodoPage> {
                     color: Theme.of(context).textTheme.bodyLarge!.color,
                   ),
                 ),
+                
               ),
-              const SizedBox(height: 8),
+              Text(
+                DateFormat('EEE d, yyyy').format(_selectedDate), 
+                style: TextStyle(
+                  fontSize: 16, // smaller font
+                  color: Theme.of(context).hintColor,
+                ),
+              ),
+              const SizedBox(height: 8), 
             ],
           ),
         ),
@@ -329,66 +303,65 @@ class _TodoPageState extends State<TodoPage> {
                       final week = _weeks[index];
                       return Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children:
-                            week.map((day) {
-                              final isSelected =
-                                  day.day == _selectedDate.day &&
+                        children: week.map((day) {
+                          final isSelected =
+                              day.day == _selectedDate.day &&
                                   day.month == _selectedDate.month;
 
-                              return GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    _selectedDate = day;
-                                  });
-                                },
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      DateFormat('E').format(day)[0],
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Container(
-                                      width: 40,
-                                      height: 40,
-                                      decoration: BoxDecoration(
-                                        color:
-                                            isSelected
-                                                ? Theme.of(
-                                                  context,
-                                                ).textTheme.bodyLarge!.color
-                                                : Colors.transparent,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      alignment: Alignment.center,
-                                      child: Text(
-                                        day.day.toString(),
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color:
-                                              isSelected
-                                                  ? (ThemeData.estimateBrightnessForColor(
-                                                            Theme.of(context)
-                                                                .textTheme
-                                                                .bodyLarge!
-                                                                .color!,
-                                                          ) ==
-                                                          Brightness.dark
-                                                      ? lightAppBackground
-                                                      : darkAppBackground)
-                                                  : Theme.of(
-                                                    context,
-                                                  ).textTheme.bodyLarge!.color,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                          return GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedDate = day;
+                              });
+                            },
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  DateFormat('EEEE').format(day).substring(0, 1), // first letter of full day name
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: isSelected ? ctaColor : Theme.of(context).textTheme.bodyLarge!.color,
                                 ),
-                              );
-                            }).toList(),
+                              ),
+                                const SizedBox(height: 4),
+                                //circlular container around the selected day
+                                Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? ctaColor
+                                        : Colors.transparent,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    day.day.toString(),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: isSelected
+                                          ? (ThemeData
+                                                      .estimateBrightnessForColor(
+                                                    Theme.of(context)
+                                                        .textTheme
+                                                        .bodyLarge!
+                                                        .color!,
+                                                  ) ==
+                                                  Brightness.dark
+                                              ? lightAppBackground
+                                              : darkAppBackground)
+                                          : Theme.of(context)
+                                              .textTheme
+                                              .bodyLarge!
+                                              .color,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
                       );
                     },
                   ),
@@ -396,175 +369,149 @@ class _TodoPageState extends State<TodoPage> {
 
                 // Task list
                 Expanded(
-                  child:
-                      _tasks.isEmpty
-                          ? Center(
-                            child: Text(
-                              "No tasks yet. Add something!",
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Theme.of(context).hintColor,
-                              ),
+                  child: _tasks.isEmpty
+                      ? Center(
+                          child: Text(
+                            "No tasks yet. Add something!",
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Theme.of(context).hintColor,
                             ),
-                          )
-                          : ListView.builder(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            itemCount: _tasks.length,
-                            itemBuilder: (context, index) {
-                              final task = _tasks[index];
-                              return Dismissible(
-                                key: Key(task['title'] + index.toString()),
-                                direction: DismissDirection.endToStart,
-                                background: Container(
-                                  margin: const EdgeInsets.only(bottom: 10),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.red,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  alignment: Alignment.centerRight,
-                                  child: const Icon(
-                                    Icons.delete,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                onDismissed: (_) {
-                                  setState(() {
-                                    _tasks.removeAt(index);
-                                  });
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text("Task deleted"),
-                                    ),
-                                  );
-                                },
-                                child: Container(
-                                  margin: const EdgeInsets.only(bottom: 10),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 23,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color:
-                                        Theme.of(context).brightness ==
-                                                Brightness.light
-                                            ? const Color.fromARGB(
-                                              255,
-                                              243,
-                                              243,
-                                              243,
-                                            )
-                                            : Colors.grey[850],
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      // Circular button for done/undone
-                                      GestureDetector(
-                                        onTap: () {
-                                          setState(() {
-                                            task['done'] =
-                                                !(task['done'] as bool);
-                                          });
-                                        },
-                                        child: Container(
-                                          width: 35,
-                                          height: 35,
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            border: Border.all(
-                                              color:
-                                                  Theme.of(context).hintColor,
-                                              width: 1,
-                                            ),
-                                            color:
-                                                task['done']
-                                                    ? Theme.of(
-                                                      context,
-                                                    ).textTheme.bodyLarge!.color
-                                                    : Colors.transparent,
-                                          ),
-                                          child:
-                                              task['done']
-                                                  ? const Icon(
-                                                    Icons.check,
-                                                    size: 16,
-                                                    color: Colors.white,
-                                                  )
-                                                  : null,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 15),
-
-                                      // Task title + planned time
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              task['title'],
-                                              style: TextStyle(
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.bold,
-                                                color:
-                                                  task['done']
-                                                      ? Theme.of(context).hintColor
-                                                      :
-                                                    Theme.of(
-                                                              context,
-                                                            ).brightness ==
-                                                            Brightness.light
-                                                        ? darkAppBackground
-                                                        : lightAppBackground,
-                                                decoration:
-                                                    task['done']
-                                                        ? TextDecoration
-                                                            .lineThrough
-                                                        : TextDecoration.none,
-                                              ),
-                                            ),
-                                            if (task['pomodoros'] > 0)
-                                              Padding(
-                                                padding: const EdgeInsets.only(top: 4.0),
-                                                child: Text(
-                                                  "${task['donePomodoros']}/${task['pomodoros']} sessions completed",
-                                                  style: const TextStyle(fontSize: 14, color: Colors.grey),
-                                                ),
-                                              ),
-                                          ],
-                                        ),
-                                      ),
-
-                                      // Three-dot menu
-                                      PopupMenuButton<String>(
-                                        onSelected: (value) {
-                                          if (value == 'edit') {
-                                            _editTaskDialog(index);
-                                          }
-                                        },
-                                        itemBuilder:
-                                            (context) => [
-                                              const PopupMenuItem(
-                                                value: 'edit',
-                                                child: Row(
-                                                  children: [
-                                                    Icon(Icons.edit, size: 18),
-                                                    SizedBox(width: 8),
-                                                    Text("Edit"),
-                                                  ],
-                                                ),
-                                              ),
-                                            ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
                           ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          itemCount: _tasks.length,
+                          itemBuilder: (context, index) {
+                            final task = _tasks[index];
+                            return Slidable(
+                              key: Key(task['title'] + index.toString()),
+                              endActionPane: ActionPane(
+                                motion: const DrawerMotion(),
+                                extentRatio: 0.20,
+                                children: [
+                                  CustomSlidableAction(
+                                    onPressed: (_) {
+                                      setState(() {
+                                        _tasks.removeAt(index);
+                                      });
+                                    },
+                                    backgroundColor: Colors.transparent,
+                                    child: Center(
+                                      child: Icon(
+                                        Icons.delete,
+                                        size: 25, // 👈 bigger trash can
+                                        color: ctaColor,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 10),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 23,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).brightness ==
+                                          Brightness.light
+                                      ? const Color.fromARGB(255, 243, 243, 243)
+                                      : Colors.grey[850],
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  children: [
+                                    // Done button
+                                    GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          task['done'] = !(task['done'] as bool);
+                                        });
+                                      },
+                                      child: Container(
+                                        width: 40,
+                                        height: 40,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: task['done']
+                                                ? Colors.transparent
+                                                :Theme.of(context).hintColor
+                                                ,
+                                            width: 1,
+                                          ),
+                                          color: task['done']
+                                              ? ctaColor
+                                              : Colors.transparent,
+                                        ),
+                                        child: task['done']
+                                            ? const Icon(
+                                                Icons.check,
+                                                size: 16,
+                                                color: Colors.white,
+                                              )
+                                            : null,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 15),
+
+                                    // Task title
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            task['title'],
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: task['done']
+                                                  ? Theme.of(context).hintColor
+                                                  : Theme.of(context)
+                                                              .brightness ==
+                                                          Brightness.light
+                                                      ? darkAppBackground
+                                                      : lightAppBackground,
+                                              decoration: task['done']
+                                                  ? TextDecoration.lineThrough
+                                                  : TextDecoration.none,
+                                            ),
+                                          ),
+                                          if (task['pomodoros'] > 0)
+                                            Padding(
+                                              padding: const EdgeInsets.only(
+                                                top: 4.0,
+                                              ),
+                                              child: Text(
+                                                "${task['donePomodoros']}/${task['pomodoros']} sessions completed",
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.grey,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+
+                                    // Edit menu
+                                    IconButton(
+                                      icon: const Icon(Icons.more_vert),
+                                      onPressed: () {
+                                        _openTaskBottomSheet(
+                                          task: task,
+                                          index: index,
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                 ),
               ],
             ),
@@ -574,21 +521,22 @@ class _TodoPageState extends State<TodoPage> {
           Align(
             alignment: Alignment.bottomCenter,
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: TextButton.icon(
-                onPressed: _addTaskBottomSheet,
-                icon: const Icon(Icons.add, size: 22),
-                label: const Text(
-                  "Add Task",
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                ),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 30,
-                    vertical: 12,
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 30),
+              child: GestureDetector(
+                onTap: _openTaskBottomSheet,
+                child: Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: ctaColor, // keep your CTA color
+                    shape: BoxShape.circle,
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(50),
+                  child: const Center(
+                    child: Icon(
+                      Icons.add,
+                      size: 30,
+                      color: Colors.white, // icon color
+                    ),
                   ),
                 ),
               ),
