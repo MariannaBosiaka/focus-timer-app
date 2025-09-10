@@ -236,6 +236,17 @@ class _TodoPageState extends State<TodoPage> {
     return weeks;
   }
 
+  String _getTaskMessage(int taskCount) {
+    if (taskCount == 0) return "";
+    if (taskCount <= 2) {
+      return "Light day ahead 🚀 Let’s crush it!";
+    } else if (taskCount <= 5) {
+      return "Today’s mission: $taskCount task${taskCount == 1 ? '' : 's'} 🔥";
+    } else {
+      return "Challenge accepted! 🎯 $taskCount tasks await.";
+    }
+  }
+
   String _currentMonth() {
     if (_weeks.isEmpty) return '';
     final currentWeek = _weeks[_currentWeekIndex];
@@ -263,7 +274,7 @@ class _TodoPageState extends State<TodoPage> {
                 child: Text(
                   _currentMonth(),
                   style: TextStyle(
-                    fontSize: 36,
+                    fontSize: 32,
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).textTheme.bodyLarge!.color,
                   ),
@@ -300,75 +311,90 @@ class _TodoPageState extends State<TodoPage> {
                     },
                     itemBuilder: (context, index) {
                       final week = _weeks[index];
-                      return Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: week.map((day) {
-                          final isSelected =
-                              day.day == _selectedDate.day &&
-                                  day.month == _selectedDate.month;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: week.map((day) {
+                            final isSelected =
+                                day.day == _selectedDate.day && day.month == _selectedDate.month;
 
-                          return GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _selectedDate = day;
-                              });
-                            },
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  DateFormat('EEEE')
-                                      .format(day)
-                                      .substring(0, 1),
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: isSelected
-                                        ? ctaColor
-                                        : Theme.of(context)
-                                            .textTheme
-                                            .bodyLarge!
-                                            .color,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: isSelected
-                                        ? ctaColor
-                                        : Colors.transparent,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    day.day.toString(),
+                            return GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedDate = day;
+                                });
+                              },
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    DateFormat('EEEE').format(day).substring(0, 1),
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       color: isSelected
-                                          ? (ThemeData
-                                                      .estimateBrightnessForColor(
-                                                    Theme.of(context)
-                                                        .textTheme
-                                                        .bodyLarge!
-                                                        .color!,
-                                                  ) ==
-                                                  Brightness.dark
-                                              ? lightAppBackground
-                                              : darkAppBackground)
-                                          : Theme.of(context)
-                                              .textTheme
-                                              .bodyLarge!
-                                              .color,
+                                          ? ctaColor
+                                          : Theme.of(context).textTheme.bodyLarge!.color,
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
+
+                                  const SizedBox(height: 4),
+
+                                  Container(
+                                    width: 35,
+                                    height: 35,
+                                    decoration: BoxDecoration(
+                                      color: isSelected ? ctaColor : Colors.transparent,
+                                      shape: BoxShape.circle,
+                                    ),
+
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      day.day.toString(),
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: isSelected
+                                            ? (ThemeData.estimateBrightnessForColor(
+                                                        Theme.of(context)
+                                                            .textTheme
+                                                            .bodyLarge!
+                                                            .color!,
+                                                      ) ==
+                                                      Brightness.dark
+                                                  ? lightAppBackground
+                                                  : darkAppBackground)
+                                            : Theme.of(context).textTheme.bodyLarge!.color,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ),
                       );
+
                     },
+                  ),
+                ),
+
+                const SizedBox(height: 17),
+
+                // New Title Section
+                // Show title only if there are tasks
+                if (_tasks.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(left: 16.0),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      _getTaskMessage(_tasks.length),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w500,
+                        color: Theme.of(context).textTheme.bodyLarge!.color,
+                      ),
+                    ),
                   ),
                 ),
 
@@ -385,30 +411,21 @@ class _TodoPageState extends State<TodoPage> {
                           ),
                         )
                       : ListView.builder(
+                        
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           itemCount: _tasks.length,
                           itemBuilder: (context, index) {
                             final task = _tasks[index];
+                            
                             return Padding(
-                              padding: const EdgeInsets.only(bottom: 10), // 👈 fixed margin here
+                              padding: const EdgeInsets.only(bottom: 10),
                               child: Slidable(
                                 key: Key(task['title'] + index.toString()),
                                 endActionPane: ActionPane(
                                   motion: const DrawerMotion(),
-                                  extentRatio: 0.40,
+                                  extentRatio: 0.20, // smaller since we only have delete
                                   children: [
-                                    // Edit button
-                                    CustomSlidableAction(
-                                      flex: 1,
-                                      onPressed: (_) {
-                                        _openTaskBottomSheet(
-                                            task: task, index: index);
-                                      },
-                                      backgroundColor: ctaColor,
-                                      foregroundColor: Colors.white,
-                                      child: const Icon(Icons.edit,
-                                          size: 25, color: Colors.white),
-                                    ),
+                                    // Delete button only
                                     CustomSlidableAction(
                                       flex: 1,
                                       onPressed: (_) {
@@ -416,110 +433,106 @@ class _TodoPageState extends State<TodoPage> {
                                           _tasks.removeAt(index);
                                         });
                                       },
-                                      backgroundColor:
-                                          const Color.fromARGB(255, 252, 93, 93),
+                                      backgroundColor: const Color.fromARGB(255, 252, 93, 93),
                                       foregroundColor: Colors.white,
-                                      child: const Icon(Icons.delete,
-                                          size: 25, color: Colors.white),
+                                      child: const Icon(Icons.delete, size: 25, color: Colors.white),
                                     ),
                                   ],
                                 ),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 23,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context).brightness ==
-                                            Brightness.light
-                                        ? const Color.fromARGB(
-                                            255, 243, 243, 243)
-                                        : Colors.grey[850],
-                                    borderRadius: const BorderRadius.horizontal(
-                                      left: Radius.circular(12),
-                                      right: Radius.circular(0),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      // Done button
-                                      GestureDetector(
-                                        onTap: () {
-                                          setState(() {
-                                            task['done'] =
-                                                !(task['done'] as bool);
-                                          });
-                                        },
-                                        child: Container(
-                                          width: 40,
-                                          height: 40,
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            border: Border.all(
-                                              color: task['done']
-                                                  ? Colors.transparent
-                                                  : Theme.of(context).hintColor,
-                                              width: 1,
-                                            ),
-                                            color: task['done']
-                                                ? ctaColor
-                                                : Colors.transparent,
-                                          ),
-                                          child: task['done']
-                                              ? const Icon(
-                                                  Icons.check,
-                                                  size: 16,
-                                                  color: Colors.white,
-                                                )
-                                              : null,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 15),
 
-                                      // Task title
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              task['title'],
-                                              style: TextStyle(
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.bold,
+                                // Task container with tap-to-edit
+                                child: GestureDetector(
+                                  onTap: () {
+                                    _openTaskBottomSheet(task: task, index: index);
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 18, 
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context).brightness == Brightness.light
+                                          ? const Color.fromARGB(255, 243, 243, 243)
+                                          : Colors.grey[850],
+                                      borderRadius: const BorderRadius.horizontal(
+                                        left: Radius.circular(12),
+                                        right: Radius.circular(0),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        // Done button
+                                        GestureDetector(
+                                          onTap: () {
+                                            setState(() {
+                                              task['done'] = !(task['done'] as bool);
+                                            });
+                                          },
+                                          child: Container(
+                                            width: 40,
+                                            height: 40,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
                                                 color: task['done']
-                                                    ? Theme.of(context).hintColor
-                                                    : Theme.of(context)
-                                                                .brightness ==
-                                                            Brightness.light
-                                                        ? darkAppBackground
-                                                        : lightAppBackground,
-                                                decoration: task['done']
-                                                    ? TextDecoration.lineThrough
-                                                    : TextDecoration.none,
+                                                    ? Colors.transparent
+                                                    : Theme.of(context).hintColor,
+                                                width: 1,
                                               ),
+                                              color: task['done'] ? ctaColor : Colors.transparent,
                                             ),
-                                            if (task['pomodoros'] > 0)
-                                              Padding(
-                                                padding: const EdgeInsets.only(
-                                                  top: 4.0,
+                                            child: task['done']
+                                                ? const Icon(
+                                                    Icons.check,
+                                                    size: 16,
+                                                    color: Colors.white,
+                                                  )
+                                                : null,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 15),
+
+                                        // Task title + pomodoro info
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                task['title'],
+                                                style: TextStyle(
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: task['done']
+                                                      ? Theme.of(context).hintColor
+                                                      : Theme.of(context).brightness == Brightness.light
+                                                          ? darkAppBackground
+                                                          : lightAppBackground,
+                                                  decoration: task['done']
+                                                      ? TextDecoration.lineThrough
+                                                      : TextDecoration.none,
                                                 ),
-                                                child: Text(
-                                                  "${task['donePomodoros']}/${task['pomodoros']} sessions completed",
-                                                  style: const TextStyle(
-                                                    fontSize: 14,
-                                                    color: Colors.grey,
+                                              ),
+                                              if (task['pomodoros'] > 0)
+                                                Padding(
+                                                  padding: const EdgeInsets.only(top: 4.0),
+                                                  child: Text(
+                                                    "${task['donePomodoros']}/${task['pomodoros']} sessions completed",
+                                                    style: const TextStyle(
+                                                      fontSize: 14,
+                                                      color: Colors.grey,
+                                                    ),
                                                   ),
                                                 ),
-                                              ),
-                                          ],
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
                             );
+
                           },
                         ),
                 ),
