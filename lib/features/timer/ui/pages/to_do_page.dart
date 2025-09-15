@@ -447,16 +447,14 @@ class _TodoPageState extends State<TodoPage> {
                                   },
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 18, 
+                                      horizontal: 20,
+                                      vertical: 20, 
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Theme.of(context).brightness == Brightness.light
-                                          ? const Color.fromARGB(255, 243, 243, 243)
-                                          : Colors.grey[850],
+                                      color: const Color.fromARGB(255, 244, 244, 244), 
                                       borderRadius: const BorderRadius.horizontal(
-                                        left: Radius.circular(12),
-                                        right: Radius.circular(0),
+                                        left: Radius.circular(20),
+                                        right: Radius.circular(20),
                                       ),
                                     ),
                                     child: Row(
@@ -471,14 +469,9 @@ class _TodoPageState extends State<TodoPage> {
                                           child: Container(
                                             width: 40,
                                             height: 40,
+                                            alignment: Alignment.center,                                   
                                             decoration: BoxDecoration(
                                               shape: BoxShape.circle,
-                                              border: Border.all(
-                                                color: task['done']
-                                                    ? Colors.transparent
-                                                    : Theme.of(context).hintColor,
-                                                width: 1,
-                                              ),
                                               color: task['done'] ? ctaColor : Colors.transparent,
                                             ),
                                             child: task['done']
@@ -490,6 +483,7 @@ class _TodoPageState extends State<TodoPage> {
                                                 : null,
                                           ),
                                         ),
+                                        
                                         const SizedBox(width: 15),
 
                                         // Task title + pomodoro info
@@ -532,7 +526,6 @@ class _TodoPageState extends State<TodoPage> {
                                 ),
                               ),
                             );
-
                           },
                         ),
                 ),

@@ -19,6 +19,28 @@ class _TimerPageState extends State<TimerPage> {
   late final PageController _modePageController;
   final PageController _mainPageController = PageController(initialPage: 0);
 
+  Widget _buildFadingPage({
+  required PageController controller,
+  required int index,
+  required Widget child,
+  }) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        double opacity = 1.0;
+        if (controller.hasClients && controller.position.haveDimensions) {
+          final pageOffset = controller.page ?? controller.initialPage.toDouble();
+          final distance = (pageOffset - index).abs();
+          opacity = (1 - (distance * 1.5)).clamp(0.0, 1.0);
+        }
+        return Opacity(
+          opacity: opacity,
+          child: child,
+        );
+      },
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -82,11 +104,14 @@ class _TimerPageState extends State<TimerPage> {
         ],
       ),
       body: PageView(
-        controller: _mainPageController,
-        physics: const PageScrollPhysics(),
-        children: [
-          // === Timer Screen ===
-          Center(
+      controller: _mainPageController,
+      physics: const PageScrollPhysics(),
+      children: [
+        // === Timer Screen with fade ===
+        _buildFadingPage(
+          controller: _mainPageController,
+          index: 0,
+          child: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -185,8 +210,8 @@ class _TimerPageState extends State<TimerPage> {
                     }
                   },
                   style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 35, vertical: 13),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 35, vertical: 13),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(50),
                     ),
@@ -215,11 +240,16 @@ class _TimerPageState extends State<TimerPage> {
               ],
             ),
           ),
+        ),
 
-          // === To-do Page ===
-          const TodoPage(),
-        ],
-      ),
+        // === To-do Page with fade ===
+        _buildFadingPage(
+          controller: _mainPageController,
+          index: 1,
+          child: const TodoPage(),
+        ),
+      ],
+    ),
     );
   }
 }
