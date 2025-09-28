@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_slidable/flutter_slidable.dart'; 
 import '../../../../themes/colors.dart';
+import '../../logic/task_provider.dart';
+import 'package:provider/provider.dart';
 
 class TodoPage extends StatefulWidget {
   const TodoPage({super.key});
@@ -11,25 +13,46 @@ class TodoPage extends StatefulWidget {
 }
 
 class _TodoPageState extends State<TodoPage> {
-  final List<Map<String, dynamic>> _tasks = []; 
+
   List<List<DateTime>> _weeks = [];
   int _currentWeekIndex = 0;
-  DateTime _selectedDate = DateTime.now();
+  late PageController _pageController;
 
   @override
   void initState() {
     super.initState();
+
     _weeks = _generateWeeks();
-    if (_weeks.isNotEmpty) {
-      _selectedDate = _weeks[_currentWeekIndex][0];
-    }
+    _pageController = PageController(viewportFraction: 0.95);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+
+      // Set default date if none is selected
+      if (taskProvider.selectedDate == null) {
+        taskProvider.setSelectedDate(DateTime.now());
+      }
+
+      final selectedDate = taskProvider.selectedDate!;
+      final weekIndex = _getWeekIndexForDate(selectedDate);
+
+      // Delay until the PageView is attached
+      Future.delayed(Duration.zero, () {
+        if (_pageController.hasClients) {
+          _pageController.jumpToPage(weekIndex);
+        }
+      });
+    });
   }
 
-  void _openTaskBottomSheet({Map<String, dynamic>? task, int? index}) {
+
+
+  void _openTaskBottomSheet(DateTime selectedDate, {Map<String, dynamic>? task, int? index}) {
     final TextEditingController taskController = TextEditingController(
       text: task?['title'] ?? "",
     );
     int newPomodoros = task?['pomodoros'] ?? 0;
+
 
     showModalBottomSheet(
       context: context,
@@ -169,23 +192,26 @@ class _TodoPageState extends State<TodoPage> {
                       Center(
                         child: TextButton(
                           onPressed: () {
+
                             final taskText = taskController.text.trim();
+                            final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+
                             if (taskText.isNotEmpty) {
                               setState(() {
                                 if (task == null) {
-                                  _tasks.add({
+                                  taskProvider.addTask(selectedDate, {
                                     'title': taskText,
                                     'done': false,
                                     'pomodoros': newPomodoros,
                                     'donePomodoros': 0,
                                   });
                                 } else {
-                                  _tasks[index!] = {
+                                  taskProvider.updateTask(selectedDate, index!, {
                                     'title': taskText,
                                     'done': task['done'],
                                     'pomodoros': newPomodoros,
                                     'donePomodoros': task['donePomodoros'] ?? 0,
-                                  };
+                                  });
                                 }
                               });
                               Navigator.pop(context);
@@ -247,14 +273,26 @@ class _TodoPageState extends State<TodoPage> {
     }
   }
 
-  String _currentMonth() {
-    if (_weeks.isEmpty) return '';
-    final currentWeek = _weeks[_currentWeekIndex];
-    return DateFormat('MMMM').format(currentWeek[0]);
+  String _currentMonth(DateTime selectedDate) {
+    return DateFormat('MMMM').format(selectedDate);
+  }
+
+  int _getWeekIndexForDate(DateTime date) {
+    for (int i = 0; i < _weeks.length; i++) {
+      if (_weeks[i].any((d) => d.year == date.year && d.month == date.month && d.day == date.day)) {
+        return i;
+      }
+    }
+    return 0;
   }
 
   @override
   Widget build(BuildContext context) {
+
+    final taskProvider = Provider.of<TaskProvider>(context);
+    final selectedDate = taskProvider.selectedDate;
+    final tasksForDay = taskProvider.tasksForSelectedDate;
+
     if (_weeks.isEmpty) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
@@ -272,7 +310,7 @@ class _TodoPageState extends State<TodoPage> {
               Align(
                 alignment: Alignment.topLeft,
                 child: Text(
-                  _currentMonth(),
+                  _currentMonth(selectedDate),
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
@@ -281,7 +319,7 @@ class _TodoPageState extends State<TodoPage> {
                 ),
               ),
               Text(
-                DateFormat('EEE d, yyyy').format(_selectedDate),
+                DateFormat('EEE d, yyyy').format(selectedDate),
                 style: TextStyle(
                   fontSize: 16,
                   color: Theme.of(context).hintColor,
@@ -302,7 +340,7 @@ class _TodoPageState extends State<TodoPage> {
                 SizedBox(
                   height: 80,
                   child: PageView.builder(
-                    controller: PageController(viewportFraction: 0.95),
+                    controller: _pageController,
                     itemCount: _weeks.length,
                     onPageChanged: (index) {
                       setState(() {
@@ -317,13 +355,11 @@ class _TodoPageState extends State<TodoPage> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: week.map((day) {
                             final isSelected =
-                                day.day == _selectedDate.day && day.month == _selectedDate.month;
+                                day.day == selectedDate.day && day.month == selectedDate.month;
 
                             return GestureDetector(
                               onTap: () {
-                                setState(() {
-                                  _selectedDate = day;
-                                });
+                                Provider.of<TaskProvider>(context, listen: false).setSelectedDate(day);
                               },
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -382,40 +418,37 @@ class _TodoPageState extends State<TodoPage> {
 
                 // New Title Section
                 // Show title only if there are tasks
-                if (_tasks.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(left: 16.0),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      _getTaskMessage(_tasks.length),
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w500,
-                        color: Theme.of(context).textTheme.bodyLarge!.color,
+               if (tasksForDay.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 16.0),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        _getTaskMessage(tasksForDay.length),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                          color: Theme.of(context).textTheme.bodyLarge!.color,
+                        ),
                       ),
                     ),
                   ),
-                ),
 
                 // Task list
                 Expanded(
-                  child: _tasks.isEmpty
+                  child: tasksForDay.isEmpty
                       ? Center(
-                          child: Text(
-                            "No tasks yet. Add something!",
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Theme.of(context).hintColor,
-                            ),
-                          ),
-                        )
+                          child: Text("No tasks yet. Add something!",
+                          style: TextStyle(
+                             fontSize: 16, 
+                             color: Theme.of(context).hintColor, 
+                          ), 
+                        ),
+                      )
                       : ListView.builder(
-                        
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          itemCount: _tasks.length,
+                          itemCount: tasksForDay.length,
                           itemBuilder: (context, index) {
-                            final task = _tasks[index];
+                            final task = tasksForDay[index];
                             
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 10),
@@ -429,12 +462,14 @@ class _TodoPageState extends State<TodoPage> {
                                     CustomSlidableAction(
                                       flex: 1,
                                       onPressed: (_) {
-                                        setState(() {
-                                          _tasks.removeAt(index);
-                                        });
+                                        Provider.of<TaskProvider>(context, listen: false)
+                                          .removeTask(selectedDate, index);
                                       },
                                       backgroundColor: const Color.fromARGB(255, 252, 93, 93),
                                       foregroundColor: Colors.white,
+
+                                      borderRadius: BorderRadius.circular(12),
+
                                       child: const Icon(Icons.delete, size: 25, color: Colors.white),
                                     ),
                                   ],
@@ -443,8 +478,8 @@ class _TodoPageState extends State<TodoPage> {
                                 // Task container with tap-to-edit
                                 child: GestureDetector(
                                   onTap: () {
-                                    _openTaskBottomSheet(task: task, index: index);
-                                  },
+                                      _openTaskBottomSheet(selectedDate, task: task, index: index);
+                                    },
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 20,
@@ -462,9 +497,8 @@ class _TodoPageState extends State<TodoPage> {
                                         // Done button
                                         GestureDetector(
                                           onTap: () {
-                                            setState(() {
-                                              task['done'] = !(task['done'] as bool);
-                                            });
+                                            Provider.of<TaskProvider>(context, listen: false)
+                                                  .toggleDone(selectedDate, index);
                                           },
                                           child: Container(
                                             width: 40,
@@ -539,7 +573,7 @@ class _TodoPageState extends State<TodoPage> {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 30),
               child: GestureDetector(
-                onTap: _openTaskBottomSheet,
+                onTap: () => _openTaskBottomSheet(selectedDate),
                 child: Container(
                   width: 60,
                   height: 60,

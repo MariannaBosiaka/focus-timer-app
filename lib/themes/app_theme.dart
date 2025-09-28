@@ -36,7 +36,7 @@ class AppTheme {
       ),
       bodyLarge: TextStyle(color: Color(0xFFF8FAF9)),
     ),
-    textButtonTheme: TextButtonThemeData(
+      textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: darkAppBackground,
         backgroundColor: lightAppBackground,
