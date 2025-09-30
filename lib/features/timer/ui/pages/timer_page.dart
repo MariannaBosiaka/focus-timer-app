@@ -7,6 +7,7 @@ import '../../logic/theme_provider.dart';
 import '../../logic/task_provider.dart';
 import '../pages/set_timer_page.dart';
 import '../pages/to_do_page.dart';
+import 'package:dropdown_button2/dropdown_button2.dart';
 
 class TimerPage extends StatefulWidget {
   const TimerPage({super.key});
@@ -129,54 +130,75 @@ class _TimerPageState extends State<TimerPage> {
                         padding: EdgeInsets.symmetric(vertical: 8.0),
                         child: Text(
                           "No tasks for today",
-                          style: TextStyle(fontSize: 16, color: Colors.grey),
+                          style: TextStyle(fontSize: 17, color: Colors.grey),
                         ),
                       );
                     }
 
                     String? selectedTask;
 
+                    //drop down menu
                     return StatefulBuilder(
                       builder: (context, setState) {
-                        final screenWidth = MediaQuery.of(context).size.width;
-                        final horizontalPadding = 32.0;
-                        double maxDropdownWidth = screenWidth - horizontalPadding;
-
                         return Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[200],
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                value: selectedTask,
+                          child: DropdownButtonHideUnderline(
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxWidth: MediaQuery.of(context).size.width * 0.6, 
+                              ),
+                              child: DropdownButton2<String>(
+                                
+                                isExpanded: true, 
                                 hint: const Text("Select a task"),
-                                isExpanded: false,
-                                alignment: Alignment.center,
-                                dropdownColor: Colors.grey[100], // <--- changes popup background
+                                value: selectedTask,
                                 onChanged: (value) {
                                   setState(() {
                                     selectedTask = value;
                                   });
                                 },
+                                
                                 items: todayTasks.map((task) {
                                   return DropdownMenuItem<String>(
                                     value: task['title'],
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    child: Padding(
+                                    padding: const EdgeInsets.only(left: 16.0),
                                       child: Text(
                                         task['title'],
-                                        softWrap: true,
-                                        overflow: TextOverflow.visible,
-                                        style: const TextStyle(fontSize: 14),
-                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(fontSize: 17),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis, 
                                       ),
                                     ),
                                   );
                                 }).toList(),
+
+                                buttonStyleData: ButtonStyleData(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color.fromARGB(255, 244, 244, 244),
+                                    borderRadius: BorderRadius.circular(30),
+                                  ),
+                                  
+                                ),
+                                iconStyleData: const IconStyleData(
+                                  icon: Icon(
+                                      Icons.keyboard_arrow_down, // your preferred arrow icon
+                                      color: ctaColor,  // purple color
+                                      size: 24,
+                                    ),
+                                ),
+                                dropdownStyleData: DropdownStyleData(
+                                  offset: Offset(
+                                    0, -MediaQuery.of(context).size.height * 0.007
+                                  ),
+                                  elevation: 0, // REMOVE shadow
+                                  decoration: BoxDecoration(
+                                    color: const Color.fromARGB(255, 244, 244, 244), // match button color
+                                    borderRadius: BorderRadius.circular(30),
+                                  ),
+                                  maxHeight: 200,
+                                ),
                               ),
                             ),
                           ),
@@ -186,12 +208,12 @@ class _TimerPageState extends State<TimerPage> {
                   },
                 ),
 
-                // Expanded keeps the rest centered
+   
                 Expanded(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Mode selector with blur
+                  
                       SizedBox(
                         height: 40,
                         width: 150,
