@@ -62,5 +62,25 @@ class TaskProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  // Increment donePomodoros for a task by index
+  void incrementPomodoro(DateTime date, int index) {
+    final key = DateFormat('yyyy-MM-dd').format(date);
+
+    if (_tasksByDate.containsKey(key)) {
+      final task = _tasksByDate[key]![index];
+
+      // Initialize if missing
+      task['donePomodoros'] = (task['donePomodoros'] ?? 0) + 1;
+
+      // Optional: Mark as done if all pomodoros completed
+      if (task['donePomodoros'] >= (task['pomodoros'] ?? 0)) {
+        task['done'] = true;
+      }
+
+      notifyListeners();
+    }
+  }
+
 }
 

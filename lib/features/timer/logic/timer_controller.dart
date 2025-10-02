@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 class TimerController extends ChangeNotifier {
   // Default durations for each mode
-  Duration _focusDuration = const Duration(minutes: 25);
+  Duration _focusDuration = const Duration(minutes: 1);
   Duration _shortBreakDuration = const Duration(minutes: 5);
   Duration _longBreakDuration = const Duration(minutes: 15);
 
@@ -29,15 +29,25 @@ class TimerController extends ChangeNotifier {
   Duration get longBreakDuration => _longBreakDuration;
 
   // Start timer
-  void start() {
+    void start({VoidCallback? onComplete}) {
     if (_isRunning) return;
+
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_remainingSeconds > 0) {
+        _remainingSeconds--;
+        notifyListeners();
+      } else {
+        pause(); // stop timer
+        if (onComplete != null) {
+          onComplete(); // trigger callback
+        }
+      }
+    });
 
     _isRunning = true;
     notifyListeners();
+  } 
 
-    _tick();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
-  }
 
   void _tick() {
     if (_remainingSeconds > 0) {

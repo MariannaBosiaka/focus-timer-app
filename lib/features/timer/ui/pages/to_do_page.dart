@@ -434,6 +434,8 @@ class _TodoPageState extends State<TodoPage> {
                     ),
                   ),
 
+                  const SizedBox(height: 15),
+
                 // Task list
                 Expanded(
                   child: tasksForDay.isEmpty
@@ -486,11 +488,10 @@ class _TodoPageState extends State<TodoPage> {
                                       vertical: 20, 
                                     ),
                                     decoration: BoxDecoration(
-                                      color: const Color.fromARGB(255, 244, 244, 244), 
-                                      borderRadius: const BorderRadius.horizontal(
-                                        left: Radius.circular(20),
-                                        right: Radius.circular(20),
-                                      ),
+                                      color: const Color.fromARGB(255, 247, 247, 247), 
+                                      borderRadius: 
+                                        BorderRadius.circular(40),
+                          
                                     ),
                                     child: Row(
                                       children: [
@@ -501,12 +502,12 @@ class _TodoPageState extends State<TodoPage> {
                                                   .toggleDone(selectedDate, index);
                                           },
                                           child: Container(
-                                            width: 40,
-                                            height: 40,
+                                            width: 45,
+                                            height: 45,
                                             alignment: Alignment.center,                                   
                                             decoration: BoxDecoration(
                                               shape: BoxShape.circle,
-                                              color: task['done'] ? ctaColor : Colors.transparent,
+                                              color: task['done'] ? ctaColor : lightAppBackground,
                                             ),
                                             child: task['done']
                                                 ? const Icon(

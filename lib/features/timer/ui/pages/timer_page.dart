@@ -19,6 +19,7 @@ class TimerPage extends StatefulWidget {
 class _TimerPageState extends State<TimerPage> {
   final List<String> _modes = const ["Focus", "Short Break", "Long Break"];
 
+  String? _selectedTaskTitle;
   late final PageController _modePageController;
   final PageController _mainPageController = PageController(initialPage: 0);
 
@@ -80,6 +81,17 @@ class _TimerPageState extends State<TimerPage> {
     }
   }
 
+  int? _getSelectedTaskIndex(TaskProvider taskProvider) {
+    final tasks = taskProvider.getTasksForDate(DateTime.now());
+    if (_selectedTaskTitle == null) return null;
+    for (int i = 0; i < tasks.length; i++) {
+      if (tasks[i]['title'] == _selectedTaskTitle) return i;
+    }
+    return null;
+  }
+
+
+
   @override
   Widget build(BuildContext context) {
     final timer = Provider.of<TimerController>(context);
@@ -135,78 +147,66 @@ class _TimerPageState extends State<TimerPage> {
                       );
                     }
 
-                    String? selectedTask;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: DropdownButtonHideUnderline(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: MediaQuery.of(context).size.width * 0.6,
+                          ),
+                          child: DropdownButton2<String>(
+                            isExpanded: true,
+                            hint: const Text("Select a task"),
+                            value: _selectedTaskTitle, // <-- page state
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedTaskTitle = value; // <-- update page state
+                              });
+                            },
+                            items: todayTasks.map((task) {
+                              return DropdownMenuItem<String>(
+                                value: task['title'],
+                                child: Padding(
+                                  padding: const EdgeInsets.only(left: 16.0),
+                                  child: Text(
+                                    task['title'],
+                                    style: const TextStyle(fontSize: 16),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
 
-                    //drop down menu
-                    return StatefulBuilder(
-                      builder: (context, setState) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                          child: DropdownButtonHideUnderline(
-                            child: ConstrainedBox(
-                              constraints: BoxConstraints(
-                                maxWidth: MediaQuery.of(context).size.width * 0.6, 
-                              ),
-                              child: DropdownButton2<String>(
-                                
-                                isExpanded: true, 
-                                hint: const Text("Select a task"),
-                                value: selectedTask,
-                                onChanged: (value) {
-                                  setState(() {
-                                    selectedTask = value;
-                                  });
-                                },
-                                
-                                items: todayTasks.map((task) {
-                                  return DropdownMenuItem<String>(
-                                    value: task['title'],
-                                    child: Padding(
-                                    padding: const EdgeInsets.only(left: 16.0),
-                                      child: Text(
-                                        task['title'],
-                                        style: const TextStyle(fontSize: 17),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis, 
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
-
-                                buttonStyleData: ButtonStyleData(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: const Color.fromARGB(255, 244, 244, 244),
-                                    borderRadius: BorderRadius.circular(30),
-                                  ),
-                                  
-                                ),
-                                iconStyleData: const IconStyleData(
-                                  icon: Icon(
-                                      Icons.keyboard_arrow_down, // your preferred arrow icon
-                                      color: ctaColor,  // purple color
-                                      size: 24,
-                                    ),
-                                ),
-                                dropdownStyleData: DropdownStyleData(
-                                  offset: Offset(
-                                    0, -MediaQuery.of(context).size.height * 0.007
-                                  ),
-                                  elevation: 0, // REMOVE shadow
-                                  decoration: BoxDecoration(
-                                    color: const Color.fromARGB(255, 244, 244, 244), // match button color
-                                    borderRadius: BorderRadius.circular(30),
-                                  ),
-                                  maxHeight: 200,
-                                ),
+                            buttonStyleData: ButtonStyleData(
+                              height: 50,
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              decoration: BoxDecoration(
+                                color: const Color.fromARGB(255, 247, 247, 247),
+                                borderRadius: BorderRadius.circular(30),
                               ),
                             ),
+
+                            menuItemStyleData: const MenuItemStyleData(height: 40),
+                            iconStyleData: const IconStyleData(
+                              icon: Icon(Icons.keyboard_arrow_down, color: ctaColor, size: 24),
+                            ),
+                            dropdownStyleData: DropdownStyleData(
+                              offset: Offset(0, -MediaQuery.of(context).size.height * 0.007),
+                              elevation: 0,
+                              decoration: BoxDecoration(
+                                color: const Color.fromARGB(255, 247, 247, 247),
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              maxHeight: 200,
+                            ),
                           ),
-                        );
-                      },
+                        ),
+                      ),
                     );
                   },
                 ),
+
 
    
                 Expanded(
@@ -299,18 +299,27 @@ class _TimerPageState extends State<TimerPage> {
                       const SizedBox(height: 50),
 
                       // Start / Pause
+                      // In TimerPage
                       TextButton(
                         onPressed: () {
                           if (timer.isRunning) {
                             timer.pause();
                           } else {
-                            timer.start();
+                            timer.start(onComplete: () {
+                              if (timer.selectedMode == 0 && _selectedTaskTitle != null) {
+                                final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+                                final index = _getSelectedTaskIndex(taskProvider);
+                                if (index != null) {
+                                  taskProvider.incrementPomodoro(DateTime.now(), index);
+                                }
+                              }
+                            });
                           }
+
                         },
                         style: TextButton.styleFrom(
                           backgroundColor: ctaColor,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 35, vertical: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 35, vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(50),
                           ),
@@ -322,6 +331,7 @@ class _TimerPageState extends State<TimerPage> {
                           ),
                         ),
                       ),
+
 
                       // Reset Button
                       SizedBox(
