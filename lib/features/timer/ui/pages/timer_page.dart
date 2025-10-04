@@ -306,12 +306,33 @@ class _TimerPageState extends State<TimerPage> {
                             timer.pause();
                           } else {
                             timer.start(onComplete: () {
-                              if (timer.selectedMode == 0 && _selectedTaskTitle != null) {
-                                final taskProvider = Provider.of<TaskProvider>(context, listen: false);
-                                final index = _getSelectedTaskIndex(taskProvider);
-                                if (index != null) {
-                                  taskProvider.incrementPomodoro(DateTime.now(), index);
+                              if (timer.selectedMode == 0) {
+                                // === FOCUS COMPLETED ===
+                                if (_selectedTaskTitle != null) {
+                                  final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+                                  final index = _getSelectedTaskIndex(taskProvider);
+                                  if (index != null) {
+                                    taskProvider.incrementPomodoro(DateTime.now(), index);
+                                  }
                                 }
+
+                                // Increment completed focus count
+                                timer.completedFocusSessions++;
+
+                                // After every 4th focus -> Long Break, otherwise Short Break
+                                if (timer.completedFocusSessions % 4 == 0) {
+                                  timer.setMode(2); // Long Break
+                                } else {
+                                  timer.setMode(1); // Short Break
+                                }
+
+                                // Reset (shows new mode, not running)
+                                timer.reset();
+
+                              } else if (timer.selectedMode == 1 || timer.selectedMode == 2) {
+                                // === BREAK COMPLETED ===
+                                timer.setMode(0); // Back to Focus
+                                timer.reset();
                               }
                             });
                           }

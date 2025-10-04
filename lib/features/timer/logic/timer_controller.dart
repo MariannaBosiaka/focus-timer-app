@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 
 class TimerController extends ChangeNotifier {
   // Default durations for each mode
-  Duration _focusDuration = const Duration(minutes: 1);
-  Duration _shortBreakDuration = const Duration(minutes: 5);
-  Duration _longBreakDuration = const Duration(minutes: 15);
+  Duration _focusDuration = const Duration(seconds: 4);
+  Duration _shortBreakDuration = const Duration(seconds: 2);
+  Duration _longBreakDuration = const Duration(seconds: 3);
 
   // Current timer state
   late Duration _currentDuration;
@@ -13,6 +13,7 @@ class TimerController extends ChangeNotifier {
   int _selectedMode = 0; // 0=Focus, 1=Short Break, 2=Long Break
   Timer? _timer;
   bool _isRunning = false;
+  int completedFocusSessions = 0;
 
   TimerController() {
     _currentDuration = _focusDuration;
