@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 const Color lightAppBackground = Color.fromARGB(255, 255, 255, 255);
 
 //dark mode colors
-const Color darkAppBackground = Color(0xFF1C1E21);
+const Color darkAppBackground = Color.fromARGB(255, 12, 31, 54);
 
 //cta colors
 const Color ctaColor = Color(0xFF3268FD);
