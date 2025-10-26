@@ -8,6 +8,15 @@ class TaskProvider extends ChangeNotifier {
   DateTime _selectedDate = DateTime.now();
   DateTime get selectedDate => _selectedDate;
 
+  String? _selectedTaskTitle; // The task currently tracked by timer
+
+  String? get selectedTaskTitle => _selectedTaskTitle;
+
+  void setSelectedTaskTitle(String? title) {
+    _selectedTaskTitle = title;
+    notifyListeners();
+  }
+
   void setSelectedDate(DateTime date) {
     _selectedDate = date;
     notifyListeners();

@@ -2,11 +2,11 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:focus_timer_app/themes/colors.dart';
 import 'package:provider/provider.dart';
+import 'package:confetti/confetti.dart';
 import '../../logic/timer_controller.dart';
 import '../../logic/task_provider.dart';
 import '../pages/set_timer_page.dart';
 import '../pages/to_do_page.dart';
-import 'package:dropdown_button2/dropdown_button2.dart';
 
 class TimerPage extends StatefulWidget {
   const TimerPage({super.key});
@@ -15,17 +15,22 @@ class TimerPage extends StatefulWidget {
   State<TimerPage> createState() => _TimerPageState();
 }
 
-class _TimerPageState extends State<TimerPage> {
+class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
   final List<String> _modes = const ["Focus", "Short Break", "Long Break"];
-  String? _selectedTaskTitle;
   late final PageController _modePageController;
   final PageController _mainPageController = PageController(initialPage: 0);
+
+  late final ConfettiController _confettiController;
+
+  bool _showFinishedMessage = false;
 
   @override
   void initState() {
     super.initState();
     final timer = Provider.of<TimerController>(context, listen: false);
     _modePageController = PageController(initialPage: timer.selectedMode);
+
+    _confettiController = ConfettiController(duration: const Duration(seconds: 2));
 
     // Keep mode selector in sync with timer
     timer.addListener(() {
@@ -43,6 +48,7 @@ class _TimerPageState extends State<TimerPage> {
   @override
   void dispose() {
     _modePageController.dispose();
+    _confettiController.dispose();
     super.dispose();
   }
 
@@ -82,12 +88,30 @@ class _TimerPageState extends State<TimerPage> {
   }
 
   int? _getSelectedTaskIndex(TaskProvider taskProvider) {
+    final selectedTaskTitle = taskProvider.selectedTaskTitle;
     final tasks = taskProvider.getTasksForDate(DateTime.now());
-    if (_selectedTaskTitle == null) return null;
+    if (selectedTaskTitle == null) return null;
     for (int i = 0; i < tasks.length; i++) {
-      if (tasks[i]['title'] == _selectedTaskTitle) return i;
+      if (tasks[i]['title'] == selectedTaskTitle) return i;
     }
     return null;
+  }
+
+  void _checkTaskCompletion(TaskProvider taskProvider) {
+    final index = _getSelectedTaskIndex(taskProvider);
+    if (index == null) return;
+
+    final task = taskProvider.getTasksForDate(DateTime.now())[index];
+    if (task['donePomodoros'] >= task['pomodoros']) {
+      _confettiController.play();
+      setState(() => _showFinishedMessage = true);
+
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) {
+          setState(() => _showFinishedMessage = false);
+        }
+      });
+    }
   }
 
   @override
@@ -113,247 +137,256 @@ class _TimerPageState extends State<TimerPage> {
                 elevation: 0,
                 toolbarHeight: 0,
               ),
-              body: Column(
+              body: Stack(
+                alignment: Alignment.center,
                 children: [
-                  const SizedBox(height: 20),
+                  // Confetti from top
+                  Align(
+                    alignment: Alignment.topCenter,
+                    child: ConfettiWidget(
+                      confettiController: _confettiController,
+                      blastDirectionality: BlastDirectionality.explosive, // downward    // many particles quickly
+                      numberOfParticles: 60,    // high number
+                      maxBlastForce: 30,
+                      minBlastForce: 15,
+                      gravity: 0.3,              // fall naturally
+                      shouldLoop: false,         // play only once
+                      colors: const [
+                        Colors.yellow,
+                        Colors.purple,
+                        Colors.blue,
+                        Colors.red,
+                        Colors.green,
+                        Colors.orange
+                      ],// optional: make custom shapes
+                    ),
+                  ),
 
-                  // Dropdown of today's tasks
-                  Consumer<TaskProvider>(
-                    builder: (context, taskProvider, _) {
-                      final today = DateTime.now();
-                      final todayTasks = taskProvider.getTasksForDate(today);
-                      if (todayTasks.isEmpty) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 8.0),
-                          child: Text(
-                            "No tasks for today",
-                            style: TextStyle(fontSize: 17, color: Colors.grey),
+                  // Finished Task Message
+                  if (_showFinishedMessage)
+                    Positioned(
+                      top: 150,
+                      child: AnimatedOpacity(
+                        duration: const Duration(milliseconds: 500),
+                        opacity: _showFinishedMessage ? 1 : 0,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: ctaColor.withOpacity(0.9),
+                            borderRadius: BorderRadius.circular(30),
                           ),
-                        );
-                      }
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                        child: DropdownButtonHideUnderline(
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxWidth: MediaQuery.of(context).size.width * 0.6,
-                            ),
-                            child: DropdownButton2<String>(
-                              isExpanded: true,
-                              hint: const Text("Select a task"),
-                              value: _selectedTaskTitle,
-                              onChanged: (value) {
-                                setState(() {
-                                  _selectedTaskTitle = value;
-                                });
-                              },
-                              items: todayTasks.map((task) {
-                                return DropdownMenuItem<String>(
-                                  value: task['title'],
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(left: 16.0),
-                                    child: Text(
-                                      task['title'],
-                                      style: const TextStyle(fontSize: 16),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                              buttonStyleData: ButtonStyleData(
-                                height: 50,
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                decoration: BoxDecoration(
-                                  color: const Color.fromARGB(255, 185, 13, 13),
-                                  borderRadius: BorderRadius.circular(30),
-                                ),
-                              ),
-                              menuItemStyleData: const MenuItemStyleData(height: 40),
-                              iconStyleData: const IconStyleData(
-                                icon: Icon(
-                                  Icons.keyboard_arrow_down,
-                                  color: ctaColor,
-                                  size: 24,
-                                ),
-                              ),
-                              dropdownStyleData: DropdownStyleData(
-                                offset: Offset(
-                                  0,
-                                  -MediaQuery.of(context).size.height * 0.007,
-                                ),
-                                elevation: 0,
-                                decoration: BoxDecoration(
-                                  color: const Color.fromARGB(255, 247, 247, 247),
-                                  borderRadius: BorderRadius.circular(30),
-                                ),
-                                maxHeight: 200,
-                              ),
+                          child: const Text(
+                            "🎉 Task Finished!",
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
                             ),
                           ),
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    ),
 
-                  Expanded(
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Mode selector
-                          SizedBox(
-                            height: 40,
-                            width: 150,
-                            child: AnimatedBuilder(
-                              animation: _modePageController,
-                              builder: (context, child) {
-                                final page = _modePageController.hasClients
-                                    ? _modePageController.page ?? _modePageController.initialPage.toDouble()
-                                    : _modePageController.initialPage.toDouble();
+                  // Main Timer Column
+                  Column(
+                    children: [
+                      const SizedBox(height: 20),
+                      Expanded(
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // --- Display Selected Task ---
+                              Consumer<TaskProvider>(
+                                builder: (context, taskProvider, _) {
+                                  final selectedTaskTitle = taskProvider.selectedTaskTitle;
+                                  if (selectedTaskTitle == null) return const SizedBox.shrink();
 
-                                return PageView.builder(
-                                  controller: _modePageController,
-                                  itemCount: _modes.length,
-                                  onPageChanged: (index) {
-                                    timer.setMode(index);
-                                  },
-                                  itemBuilder: (context, index) {
-                                    final distance = (page - index).abs();
-                                    final blurAmount = (distance == 0) ? 0.0 : (distance * 5).clamp(0.0, 5.0);
-                                    final opacity = (distance == 0) ? 1.0 : (1 - (distance * 0.5)).clamp(0.0, 1.0);
+                                  final todayTasks = taskProvider.getTasksForDate(DateTime.now());
+                                  final task = todayTasks.firstWhere(
+                                    (t) => t['title'] == selectedTaskTitle,
+                                    orElse: () => {},
+                                  );
 
-                                    return Center(
-                                      child: Opacity(
-                                        opacity: opacity,
-                                        child: ClipRect(
-                                          child: BackdropFilter(
-                                            filter: ImageFilter.blur(
-                                              sigmaX: blurAmount,
-                                              sigmaY: blurAmount,
-                                            ),
-                                            child: Text(
-                                              _modes[index],
-                                              style: Theme.of(context).textTheme.headlineSmall!.copyWith(
-                                                fontWeight: FontWeight.bold,
-                                                color: Theme.of(context).iconTheme.color,
+                                  if (task.isEmpty || (task['donePomodoros'] >= task['pomodoros'])) {
+                                    return const SizedBox.shrink();
+                                  }
+
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 16.0),
+                                    child: Text(
+                                      "Next Task: ${task['title']}",
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: yellowTextColor,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  );
+                                },
+                              ),
+
+                              // Mode selector
+                              SizedBox(
+                                height: 40,
+                                width: 150,
+                                child: AnimatedBuilder(
+                                  animation: _modePageController,
+                                  builder: (context, child) {
+                                    final page = _modePageController.hasClients
+                                        ? _modePageController.page ?? _modePageController.initialPage.toDouble()
+                                        : _modePageController.initialPage.toDouble();
+
+                                    return PageView.builder(
+                                      controller: _modePageController,
+                                      itemCount: _modes.length,
+                                      onPageChanged: (index) => timer.setMode(index),
+                                      itemBuilder: (context, index) {
+                                        final distance = (page - index).abs();
+                                        final blurAmount = (distance == 0) ? 0.0 : (distance * 5).clamp(0.0, 5.0);
+                                        final opacity = (distance == 0) ? 1.0 : (1 - (distance * 0.5)).clamp(0.0, 1.0);
+
+                                        return Center(
+                                          child: Opacity(
+                                            opacity: opacity,
+                                            child: ClipRect(
+                                              child: BackdropFilter(
+                                                filter: ImageFilter.blur(
+                                                  sigmaX: blurAmount,
+                                                  sigmaY: blurAmount,
+                                                ),
+                                                child: Text(
+                                                  _modes[index],
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .headlineSmall!
+                                                      .copyWith(
+                                                        fontWeight: FontWeight.bold,
+                                                        color: Theme.of(context).iconTheme.color,
+                                                      ),
+                                                ),
                                               ),
                                             ),
                                           ),
-                                        ),
-                                      ),
+                                        );
+                                      },
                                     );
                                   },
-                                );
-                              },
-                            ),
-                          ),
-
-                          const SizedBox(height: 50),
-
-                          // Smoothly scale timer when running and stay big
-                          TweenAnimationBuilder<double>(
-                            tween: Tween<double>(
-                              begin: 1.0,
-                              end: timer.isRunning ? 1.05 : 1.0,
-                            ),
-                            duration: const Duration(milliseconds: 500),
-                            curve: Curves.easeOut,
-                            builder: (context, scale, child) {
-                              return Transform.scale(
-                                scale: scale,
-                                child: AnimatedDefaultTextStyle(
-                                  duration: const Duration(milliseconds: 500),
-                                  style: Theme.of(context).textTheme.displayLarge!.copyWith(
-                                    fontSize: 85,
-                                    color: timer.isRunning ? yellowTextColor : Theme.of(context).iconTheme.color,
-                                  ),
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => SetTimerPage(
-                                            initialMinutes: timer.remainingSeconds ~/ 60,
-                                            selectedMode: timer.selectedMode,
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    child: Text(
-                                      formatTime(timer.remainingSeconds),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ),
                                 ),
-                              );
-                            },
-                          ),
+                              ),
 
-                          const SizedBox(height: 50),
+                              const SizedBox(height: 50),
 
-                          // Start/Pause Button
-                          TextButton(
-                            onPressed: () {
-                              if (timer.isRunning) {
-                                timer.pause();
-                              } else {
-                                timer.start(
-                                  onComplete: () {
-                                    if (timer.selectedMode == 0) {
-                                      if (_selectedTaskTitle != null) {
-                                        final taskProvider = Provider.of<TaskProvider>(context, listen: false);
-                                        final index = _getSelectedTaskIndex(taskProvider);
-                                        if (index != null) {
-                                          taskProvider.incrementPomodoro(DateTime.now(), index);
+                              // Timer display
+                              TweenAnimationBuilder<double>(
+                                tween: Tween<double>(
+                                  begin: 1.0,
+                                  end: timer.isRunning ? 1.05 : 1.0,
+                                ),
+                                duration: const Duration(milliseconds: 500),
+                                curve: Curves.easeOut,
+                                builder: (context, scale, child) {
+                                  return Transform.scale(
+                                    scale: scale,
+                                    child: AnimatedDefaultTextStyle(
+                                      duration: const Duration(milliseconds: 500),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .displayLarge!
+                                          .copyWith(
+                                            fontSize: 85,
+                                            color: timer.isRunning
+                                                ? yellowTextColor
+                                                : Theme.of(context).iconTheme.color,
+                                          ),
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => SetTimerPage(
+                                                initialMinutes: timer.remainingSeconds ~/ 60,
+                                                selectedMode: timer.selectedMode,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                        child: Text(
+                                          formatTime(timer.remainingSeconds),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+
+                              const SizedBox(height: 50),
+
+                              // Start/Pause Button
+                              TextButton(
+                                onPressed: () {
+                                  if (timer.isRunning) {
+                                    timer.pause();
+                                  } else {
+                                    timer.start(
+                                      onComplete: () {
+                                        final taskProvider =
+                                            Provider.of<TaskProvider>(context, listen: false);
+
+                                        if (timer.selectedMode == 0) {
+                                          final index = _getSelectedTaskIndex(taskProvider);
+                                          if (index != null) {
+                                            taskProvider.incrementPomodoro(DateTime.now(), index);
+
+                                            // Trigger confetti & finished message if task done
+                                            _checkTaskCompletion(taskProvider);
+                                          }
+
+                                          timer.completedFocusSessions++;
+                                          timer.setMode(
+                                              timer.completedFocusSessions % 4 == 0 ? 2 : 1);
+                                          timer.reset();
+                                        } else {
+                                          timer.setMode(0);
+                                          timer.reset();
                                         }
-                                      }
+                                      },
+                                    );
+                                  }
+                                },
+                                style: TextButton.styleFrom(
+                                  backgroundColor: ctaColor,
+                                  padding: const EdgeInsets.symmetric(horizontal: 35, vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(50)),
+                                  minimumSize: const Size(0, 0),
+                                ),
+                                child: Text(
+                                  buttonText(timer),
+                                  style: const TextStyle(fontSize: 17),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
 
-                                      timer.completedFocusSessions++;
-
-                                      if (timer.completedFocusSessions % 4 == 0) {
-                                        timer.setMode(2);
-                                      } else {
-                                        timer.setMode(1);
-                                      }
-
-                                      timer.reset();
-                                    } else if (timer.selectedMode == 1 || timer.selectedMode == 2) {
-                                      timer.setMode(0);
-                                      timer.reset();
-                                    }
-                                  },
-                                );
-                              }
-                            },
-                            style: TextButton.styleFrom(
-                              backgroundColor: ctaColor,
-                              padding: const EdgeInsets.symmetric(horizontal: 35, vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
-                              minimumSize: const Size(0, 0),
-                            ),
-                            child: Text(
-                              buttonText(timer),
-                              style: const TextStyle(fontSize: 17),
-                              textAlign: TextAlign.center,
-                            ),
+                              SizedBox(
+                                height: 60,
+                                child: timer.remainingSeconds != timer.initialSeconds
+                                    ? IconButton(
+                                        onPressed: timer.reset,
+                                        icon: const Icon(Icons.refresh),
+                                        tooltip: 'Reset Timer',
+                                        color: Theme.of(context).iconTheme.color,
+                                        iconSize: 30,
+                                      )
+                                    : null,
+                              ),
+                            ],
                           ),
-
-                          SizedBox(
-                            height: 60,
-                            child: timer.remainingSeconds != timer.initialSeconds
-                                ? IconButton(
-                                    onPressed: timer.reset,
-                                    icon: const Icon(Icons.refresh),
-                                    tooltip: 'Reset Timer',
-                                    color: Theme.of(context).iconTheme.color,
-                                    iconSize: 30,
-                                  )
-                                : null,
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ],
               ),

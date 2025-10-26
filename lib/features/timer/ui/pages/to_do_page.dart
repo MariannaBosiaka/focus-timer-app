@@ -5,6 +5,7 @@ import '../../../../themes/colors.dart';
 import '../../logic/task_provider.dart';
 import 'package:provider/provider.dart';
 import 'add_edit_tasks_page.dart';
+import '../../../timer/ui/pages/timer_page.dart';
 
 class TodoPage extends StatefulWidget {
   const TodoPage({super.key});
@@ -108,7 +109,7 @@ class _TodoPageState extends State<TodoPage> {
   @override
   Widget build(BuildContext context) {
     final taskProvider = Provider.of<TaskProvider>(context);
-    final selectedDate = taskProvider.selectedDate!;
+    final selectedDate = taskProvider.selectedDate;
     final tasksForDay = taskProvider.tasksForSelectedDate;
     final filteredTasksForDay = _filteredTasks(tasksForDay);
 
@@ -354,7 +355,16 @@ class _TodoPageState extends State<TodoPage> {
                                                 children: [
                                                   CustomSlidableAction(
                                                     onPressed: (context) {
-                                                      debugPrint("Left side action tapped!");
+                                                      final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+
+                                                      // Set the selected task in the provider
+                                                      taskProvider.setSelectedTaskTitle(task['title']);
+
+                                                      // Navigate to TimerPage
+                                                      Navigator.push(
+                                                        context,
+                                                        MaterialPageRoute(builder: (_) => const TimerPage()),
+                                                      );
                                                     },
                                                     backgroundColor: darkAppBackground,
                                                     borderRadius: BorderRadius.circular(30),
@@ -366,8 +376,10 @@ class _TodoPageState extends State<TodoPage> {
                                                       ),
                                                     ),
                                                   ),
+
                                                 ],
                                               ),
+
 
                                               // RIGHT SIDE (swipe left)
                                               endActionPane: ActionPane(
@@ -524,9 +536,6 @@ class _TodoPageState extends State<TodoPage> {
                                                               ],
                                                             ),
                                                           ),
-
-
-
                                                       ],
                                                     ),
                                                   ),
