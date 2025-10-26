@@ -23,24 +23,4 @@ class AppTheme {
       ),
     ),
   );
-
-  static final ThemeData darkTheme = ThemeData(
-    brightness: Brightness.dark,
-    scaffoldBackgroundColor: darkAppBackground,
-    textTheme: const TextTheme(
-      displayLarge: TextStyle(
-        color: Color(0xFFF8FAF9),
-        fontSize: 72,
-        fontWeight: FontWeight.w700,
-        fontFamily: 'Inter',
-      ),
-      bodyLarge: TextStyle(color: Color(0xFFF8FAF9)),
-    ),
-      textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(
-        foregroundColor: darkAppBackground,
-        backgroundColor: lightAppBackground,
-      ),
-    ),
-  );
 }

@@ -32,6 +32,23 @@ class _AddEditTasksPageState extends State<AddEditTasksPage> {
   int _shortBreak = 5;
   int _longBreak = 10;
 
+  // --- Category Selection ---
+  final List<String> _categories = [
+    "Study",
+    "Chores",
+    "Meeting",
+    "Work",
+    "Hobby",
+    "Exercise",
+    "Reading",
+    "Other",
+  ];
+
+  String? _selectedCategory;
+
+  final FocusNode _customNumberFocusNode = FocusNode();
+
+
   // Selected mode
   String _selectedMode = "Focus";
 
@@ -46,20 +63,43 @@ class _AddEditTasksPageState extends State<AddEditTasksPage> {
       text: widget.task?['description'] ?? '',
     );
     _pomodoros = widget.task?['pomodoros'] ?? 0;
+
+    if (_pomodoros > 0 && _pomodoros <= 4) {
+      _selectedSymbol = _pomodoros.toString();
+    } else if (_pomodoros > 4) {
+      _selectedSymbol = 'custom';
+      _customNumberController.text = _pomodoros.toString();
+    } else {
+      _selectedSymbol = '-';
+    }
+
+    _customNumberFocusNode.addListener(() {
+      setState(() {}); // rebuild when focus changes
+    });
   }
 
   @override
   void dispose() {
     _taskController.dispose();
     _descriptionController.dispose();
+    _customNumberFocusNode.dispose(); 
     super.dispose();
   }
+
 
   void _saveTask() {
     final text = _taskController.text.trim();
     if (text.isEmpty) return;
 
     final provider = Provider.of<TaskProvider>(context, listen: false);
+
+    int selectedPomodoros = 0;
+    if (_selectedSymbol == 'custom' && _customNumberController.text.isNotEmpty) {
+      selectedPomodoros = int.tryParse(_customNumberController.text) ?? 0;
+    } else if (_selectedSymbol != '-' && _selectedSymbol != 'custom') {
+      selectedPomodoros = int.tryParse(_selectedSymbol) ?? 0;
+    }
+    _pomodoros = selectedPomodoros;
 
     final newTask = {
       'title': text,
@@ -70,6 +110,7 @@ class _AddEditTasksPageState extends State<AddEditTasksPage> {
       'focusLength': _focusLength,
       'shortBreak': _shortBreak,
       'longBreak': _longBreak,
+      'category': _selectedCategory ?? '',
     };
 
     if (widget.task == null) {
@@ -80,6 +121,7 @@ class _AddEditTasksPageState extends State<AddEditTasksPage> {
 
     Navigator.pop(context);
   }
+
 
   int get _currentValue {
     switch (_selectedMode) {
@@ -143,7 +185,7 @@ class _AddEditTasksPageState extends State<AddEditTasksPage> {
                       fontSize: 40,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 0.5,
-                      color: darkAppBackground,
+                      color: yellowTextColor,
                     ),
                   ),
                   Text(
@@ -152,7 +194,7 @@ class _AddEditTasksPageState extends State<AddEditTasksPage> {
                       fontSize: 40,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 0.5,
-                      color: darkAppBackground,
+                      color: yellowTextColor,
                     ),
                   ),
                 ],
@@ -189,7 +231,7 @@ class _AddEditTasksPageState extends State<AddEditTasksPage> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: lightTextColor,
+                    color: purpleCtaColor,
                   ),
                 ),
 
@@ -198,22 +240,24 @@ class _AddEditTasksPageState extends State<AddEditTasksPage> {
                 // --- Symbol Squares Row ---
                 Row(
                   children: [
-                    // Existing symbol boxes
+                    // --- Symbol Boxes ('-', '1', '2', '3', '4') ---
                     ...['-', '1', '2', '3', '4'].map((symbol) {
-                      final isSelected = symbol == _selectedSymbol;
+                      final isSelected = _selectedSymbol == symbol;
 
                       return GestureDetector(
                         onTap: () {
+                          FocusScope.of(context).unfocus();
                           setState(() {
                             _selectedSymbol = symbol;
                           });
                         },
                         child: Container(
-                          margin: EdgeInsets.only(right: MediaQuery.of(context).size.width * 0.02),
+                          margin: EdgeInsets.only(
+                              right: MediaQuery.of(context).size.width * 0.02),
                           width: MediaQuery.of(context).size.width * 0.08,
                           height: MediaQuery.of(context).size.width * 0.08,
                           decoration: BoxDecoration(
-                            color: isSelected ? ctaColor : secondaryColor,
+                            color: isSelected ? ctaColor : purpleCtaColor,
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Center(
@@ -222,7 +266,8 @@ class _AddEditTasksPageState extends State<AddEditTasksPage> {
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: isSelected ? Colors.white : darkAppBackground,
+                                color:
+                                    isSelected ? darkAppBackground : yellowTextColor,
                               ),
                             ),
                           ),
@@ -230,59 +275,84 @@ class _AddEditTasksPageState extends State<AddEditTasksPage> {
                       );
                     }).toList(),
 
-                    // Spacer before "+ Add"
                     SizedBox(width: MediaQuery.of(context).size.width * 0.05),
 
-                    // + Add text
+                    // --- "+ add" text ---
                     Text(
                       "+ add",
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: darkAppBackground,
+                        color: yellowTextColor,
                       ),
                     ),
 
-                    // Spacer before input box
                     SizedBox(width: MediaQuery.of(context).size.width * 0.02),
 
-                    // Input box for natural numbers
+                    // --- Custom number box (acts as 6th selectable box) ---
                     SizedBox(
                       width: MediaQuery.of(context).size.width * 0.08,
                       height: MediaQuery.of(context).size.width * 0.08,
-                      child: TextField(
-                        controller: _customNumberController,
-                        keyboardType: TextInputType.number,
-                        textAlign: TextAlign.center,
-                        maxLength: 2,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: darkAppBackground,
-                        ),
-                        decoration: InputDecoration(
-                          counterText: "", // hide maxLength counter
-                          contentPadding: EdgeInsets.zero,
-                          filled: true,
-                          fillColor: secondaryColor,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                          FilteringTextInputFormatter.allow(RegExp(r'^([1-9][0-9]?|0)$')), // 0-99
-                        ],
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedSymbol = value; // optional: handle selection logic
-                          });
+                      child: Focus(
+                        focusNode: _customNumberFocusNode,
+                        onFocusChange: (hasFocus) {
+                          if (hasFocus) {
+                            setState(() {
+                              _selectedSymbol = 'custom';
+                            });
+                          } else {
+                            if (_selectedSymbol == 'custom') {
+                              setState(() {});
+                            }
+                          }
                         },
+                        child: TextField(
+                          controller: _customNumberController,
+                          keyboardType: TextInputType.number,
+                          textAlign: TextAlign.center,
+                          maxLength: 2,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: (_customNumberFocusNode.hasFocus ||
+                                    _selectedSymbol == 'custom')
+                                ? darkAppBackground
+                                : yellowTextColor,
+                          ),
+                          decoration: InputDecoration(
+                            counterText: "",
+                            contentPadding: EdgeInsets.zero,
+                            filled: true,
+                            fillColor: (_customNumberFocusNode.hasFocus ||
+                                    _selectedSymbol == 'custom')
+                                ? ctaColor
+                                : purpleCtaColor,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            FilteringTextInputFormatter.allow(
+                                RegExp(r'^([1-9][0-9]?|0)$')), // 0–99
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedSymbol = 'custom';
+                            });
+                          },
+                          onTap: () {
+                            setState(() {
+                              _selectedSymbol = 'custom';
+                            });
+                          },
+                        ),
                       ),
                     ),
                   ],
                 ),
+
 
 
                 SizedBox(height: MediaQuery.of(context).size.height * 0.03),
@@ -294,6 +364,53 @@ class _AddEditTasksPageState extends State<AddEditTasksPage> {
                   controller: _descriptionController,
                   minLines: 1,
                   maxLines: null,
+                ),
+
+                SizedBox(height: MediaQuery.of(context).size.height * 0.04),
+
+                // --- Categories Section ---
+                Text(
+                  "Categories",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: purpleCtaColor,
+                  ),
+                ),
+
+                SizedBox(height: MediaQuery.of(context).size.height * 0.02),
+
+                Wrap(
+                  spacing: MediaQuery.of(context).size.width * 0.03, // horizontal spacing
+                  runSpacing: MediaQuery.of(context).size.height * 0.015, // vertical spacing
+                  children: _categories.map((category) {
+                    final isSelected = _selectedCategory == category;
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedCategory = isSelected ? null : category;
+                        });
+                      },
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          vertical: MediaQuery.of(context).size.height * 0.012,
+                          horizontal: MediaQuery.of(context).size.width * 0.07,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isSelected ? ctaColor : purpleCtaColor,
+                          borderRadius: BorderRadius.circular(50),
+                        ),
+                        child: Text(
+                          category,
+                          style: TextStyle(
+                            color: isSelected ? darkAppBackground : yellowTextColor,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
                 ),
               ],
             ),
@@ -318,7 +435,6 @@ class _AddEditTasksPageState extends State<AddEditTasksPage> {
                       borderRadius: BorderRadius.circular(50),
                     ),
                     elevation: 4,
-                    shadowColor: ctaColor.withOpacity(0.4),
                   ),
                   child: Text(
                     isEditing ? "Save" : "Create New Task",
@@ -338,21 +454,6 @@ class _AddEditTasksPageState extends State<AddEditTasksPage> {
     );
   }
 
-  // --- Circle Button ---
-  Widget _buildCircleButton(IconData icon, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: const Color.fromARGB(255, 247, 247, 247),
-        ),
-        padding: const EdgeInsets.all(6),
-        child: Icon(icon, size: 22, color: Colors.grey),
-      ),
-    );
-  }
-
   // --- Labeled TextField (with solid color) ---
   Widget _labeledTextField({
     required String label,
@@ -369,7 +470,7 @@ class _AddEditTasksPageState extends State<AddEditTasksPage> {
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 16,
-            color: lightTextColor,
+            color: purpleCtaColor,
           ),
         ),
         const SizedBox(height: 3),
@@ -379,22 +480,22 @@ class _AddEditTasksPageState extends State<AddEditTasksPage> {
           maxLines: maxLines,
           keyboardType: TextInputType.multiline,
           style: TextStyle(
-            color: darkAppBackground,
+            color: yellowTextColor,
             fontSize: 16,
             fontWeight: FontWeight.w500,
           ),
           decoration: InputDecoration(
             enabledBorder: UnderlineInputBorder(
               borderSide: BorderSide(
-                color: lightTextColor.withOpacity(0.4),
+                color: purpleCtaColor.withOpacity(0.4),
                 width: 1,
               ),
             ),
             focusedBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: lightTextColor, width: 1),
+              borderSide: BorderSide(color: purpleCtaColor, width: 1),
             ),
             border: UnderlineInputBorder(
-              borderSide: BorderSide(color: lightTextColor),
+              borderSide: BorderSide(color: purpleCtaColor),
             ),
             contentPadding: const EdgeInsets.symmetric(vertical: 10),
           ),

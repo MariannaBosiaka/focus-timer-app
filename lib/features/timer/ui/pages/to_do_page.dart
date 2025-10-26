@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter_slidable/flutter_slidable.dart'; 
+import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../../../themes/colors.dart';
 import '../../logic/task_provider.dart';
 import 'package:provider/provider.dart';
@@ -14,22 +14,21 @@ class TodoPage extends StatefulWidget {
 }
 
 class _TodoPageState extends State<TodoPage> {
-
   List<List<DateTime>> _weeks = [];
   int _currentWeekIndex = 0;
   late PageController _pageController;
+  String _selectedFilter = "All"; // Default filter
 
   @override
   void initState() {
     super.initState();
 
     _weeks = _generateWeeks();
-    _pageController = PageController(viewportFraction: 0.95);
+    _pageController = PageController(viewportFraction: 0.90);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final taskProvider = Provider.of<TaskProvider>(context, listen: false);
 
-      // Set default date if none is selected
       if (taskProvider.selectedDate == null) {
         taskProvider.setSelectedDate(DateTime.now());
       }
@@ -37,7 +36,6 @@ class _TodoPageState extends State<TodoPage> {
       final selectedDate = taskProvider.selectedDate!;
       final weekIndex = _getWeekIndexForDate(selectedDate);
 
-      // Delay until the PageView is attached
       Future.delayed(Duration.zero, () {
         if (_pageController.hasClients) {
           _pageController.jumpToPage(weekIndex);
@@ -46,9 +44,11 @@ class _TodoPageState extends State<TodoPage> {
     });
   }
 
-
-
-  void _openTaskEditorPage(DateTime selectedDate, {Map<String, dynamic>? task, int? index}) {
+  void _openTaskEditorPage(
+    DateTime selectedDate, {
+    Map<String, dynamic>? task,
+    int? index,
+  }) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -60,7 +60,6 @@ class _TodoPageState extends State<TodoPage> {
       ),
     );
   }
-
 
   List<List<DateTime>> _generateWeeks() {
     List<List<DateTime>> weeks = [];
@@ -78,16 +77,17 @@ class _TodoPageState extends State<TodoPage> {
     return weeks;
   }
 
-  String _getTaskMessage(int taskCount) {
-    if (taskCount == 0) return "";
-    if (taskCount <= 2) {
-      return "Light day ahead 🚀 Let’s crush it!";
-    } else if (taskCount <= 5) {
-      return "Today’s mission: $taskCount task${taskCount == 1 ? '' : 's'} 🔥";
-    } else {
-      return "Challenge accepted! 🎯 $taskCount tasks await.";
-    }
+  List<Map<String, dynamic>> _filteredTasks(List<Map<String, dynamic>> tasks) {
+  switch (_selectedFilter) {
+    case "To Do":
+      return tasks.where((task) => task['done'] == false).toList();
+    case "Completed":
+      return tasks.where((task) => task['done'] == true).toList();
+    default:
+      return tasks; // All
   }
+}
+
 
   String _currentMonth(DateTime selectedDate) {
     return DateFormat('MMMM').format(selectedDate);
@@ -95,7 +95,10 @@ class _TodoPageState extends State<TodoPage> {
 
   int _getWeekIndexForDate(DateTime date) {
     for (int i = 0; i < _weeks.length; i++) {
-      if (_weeks[i].any((d) => d.year == date.year && d.month == date.month && d.day == date.day)) {
+      if (_weeks[i].any(
+        (d) =>
+            d.year == date.year && d.month == date.month && d.day == date.day,
+      )) {
         return i;
       }
     }
@@ -104,18 +107,19 @@ class _TodoPageState extends State<TodoPage> {
 
   @override
   Widget build(BuildContext context) {
-
     final taskProvider = Provider.of<TaskProvider>(context);
-    final selectedDate = taskProvider.selectedDate;
+    final selectedDate = taskProvider.selectedDate!;
     final tasksForDay = taskProvider.tasksForSelectedDate;
+    final filteredTasksForDay = _filteredTasks(tasksForDay);
 
     if (_weeks.isEmpty) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
+      backgroundColor: darkAppBackground,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: darkAppBackground,
         toolbarHeight: 90,
         elevation: 0,
         title: Padding(
@@ -128,18 +132,15 @@ class _TodoPageState extends State<TodoPage> {
                 child: Text(
                   _currentMonth(selectedDate),
                   style: TextStyle(
-                    fontSize: 35,
+                    fontSize: 48,
                     fontWeight: FontWeight.w900,
-                    color: Theme.of(context).textTheme.bodyLarge!.color,
+                    color: yellowTextColor,
                   ),
                 ),
               ),
               Text(
                 DateFormat('EEE d, yyyy').format(selectedDate),
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Theme.of(context).hintColor,
-                ),
+                style: TextStyle(fontSize: 18, color: yellowTextColor),
               ),
               const SizedBox(height: 8),
             ],
@@ -148,243 +149,406 @@ class _TodoPageState extends State<TodoPage> {
       ),
       body: Stack(
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Column(
-              children: [
-                // Week horizontal scroll
-                SizedBox(
-                  height: 80,
-                  child: PageView.builder(
-                    controller: _pageController,
-                    itemCount: _weeks.length,
-                    onPageChanged: (index) {
-                      setState(() {
-                        _currentWeekIndex = index;
-                      });
-                    },
-                    itemBuilder: (context, index) {
-                      final week = _weeks[index];
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          Column(
+            children: [
+              // Week selector
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Column(
+                  children: [
+                    SizedBox(
+                      height: 80,
+                      child: PageView.builder(
+                        controller: _pageController,
+                        itemCount: _weeks.length,
+                        onPageChanged: (index) {
+                          setState(() {
+                            _currentWeekIndex = index;
+                          });
+                        },
+                        itemBuilder: (context, index) {
+                          final week = _weeks[index];
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: week.map((day) {
+                                final isSelected =
+                                    day.day == selectedDate.day &&
+                                    day.month == selectedDate.month;
+
+                                return GestureDetector(
+                                  onTap: () {
+                                    Provider.of<TaskProvider>(
+                                      context,
+                                      listen: false,
+                                    ).setSelectedDate(day);
+                                  },
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        DateFormat('EEEE').format(day).substring(0, 1),
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: isSelected ? ctaColor : yellowTextColor,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        day.day.toString(),
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: isSelected ? ctaColor : yellowTextColor,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Container(
+                                        width: 4,
+                                        height: 4,
+                                        decoration: BoxDecoration(
+                                          color: isSelected ? ctaColor : Colors.transparent,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 15),
+                  ],
+                ),
+              ),
+
+              // Task list
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: lightAppBackground,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(40),
+                      topRight: Radius.circular(40),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 30),
+
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
                         child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: week.map((day) {
-                            final isSelected =
-                                day.day == selectedDate.day && day.month == selectedDate.month;
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: ["All", "To Do", "Completed"].map((filter) {
+                            final isSelected = _selectedFilter == filter;
+
+                            // Count tasks per category
+                            int count;
+                            switch (filter) {
+                              case "To Do":
+                                count = tasksForDay.where((t) => t['done'] == false).length;
+                                break;
+                              case "Completed":
+                                count = tasksForDay.where((t) => t['done'] == true).length;
+                                break;
+                              default:
+                                count = tasksForDay.length;
+                            }
 
                             return GestureDetector(
                               onTap: () {
-                                Provider.of<TaskProvider>(context, listen: false).setSelectedDate(day);
+                                setState(() {
+                                  _selectedFilter = filter;
+                                });
                               },
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    DateFormat('EEEE').format(day).substring(0, 1),
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: isSelected
-                                          ? ctaColor
-                                          : Theme.of(context).textTheme.bodyLarge!.color,
-                                    ),
-                                  ),
-
-                                  const SizedBox(height: 4),
-
-                                  Container(
-                                    width: 35,
-                                    height: 35,
-                                    decoration: BoxDecoration(
-                                      color: isSelected ? ctaColor : Colors.transparent,
-                                      shape: BoxShape.circle,
-                                    ),
-
-                                    alignment: Alignment.center,
-                                    child: Text(
-                                      day.day.toString(),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: isSelected ? ctaColor : purpleCtaColor,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      filter,
                                       style: TextStyle(
+                                        fontSize: 14,
                                         fontWeight: FontWeight.bold,
-                                        color: isSelected
-                                            ? (ThemeData.estimateBrightnessForColor(
-                                                        Theme.of(context)
-                                                            .textTheme
-                                                            .bodyLarge!
-                                                            .color!,
-                                                      ) ==
-                                                      Brightness.dark
-                                                  ? lightAppBackground
-                                                  : darkAppBackground)
-                                            : Theme.of(context).textTheme.bodyLarge!.color,
+                                        color: isSelected ? darkAppBackground : yellowTextColor,
                                       ),
                                     ),
-                                  ),
-                                ],
+                                    if (count > 0) ...[
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        "($count)",
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: isSelected
+                                              ? darkAppBackground.withValues(alpha: 0.8)
+                                              : yellowTextColor.withValues(alpha: 0.8),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
                               ),
                             );
                           }).toList(),
                         ),
-                      );
-
-                    },
-                  ),
-                ),
-
-                const SizedBox(height: 17),
-
-                // New Title Section
-                // Show title only if there are tasks
-               if (tasksForDay.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 16.0),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        _getTaskMessage(tasksForDay.length),
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w500,
-                          color: Theme.of(context).textTheme.bodyLarge!.color,
-                        ),
                       ),
-                    ),
-                  ),
+                      const SizedBox(height: 20),
 
-                  const SizedBox(height: 15),
-
-                // Task list
-                Expanded(
-                  child: tasksForDay.isEmpty
-                      ? Center(
-                          child: Text("No tasks yet. Add something!",
-                          style: TextStyle(
-                             fontSize: 16, 
-                             color: Theme.of(context).hintColor, 
-                          ), 
-                        ),
-                      )
-                      : ListView.builder(
-                          itemCount: tasksForDay.length,
-                          itemBuilder: (context, index) {
-                            final task = tasksForDay[index];
-                            
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: Slidable(
-                                key: Key(task['title'] + index.toString()),
-                                endActionPane: ActionPane(
-                                  motion: const DrawerMotion(),
-                                  extentRatio: 0.20, // smaller since we only have delete
-                                  children: [
-                                    // Delete button only
-                                    CustomSlidableAction(
-                                      flex: 1,
-                                      onPressed: (_) {
-                                        Provider.of<TaskProvider>(context, listen: false)
-                                          .removeTask(selectedDate, index);
-                                      },
-                                      backgroundColor: const Color.fromARGB(255, 252, 93, 93),
-                                      foregroundColor: Colors.white,
-
-                                      borderRadius: BorderRadius.circular(12),
-
-                                      child: const Icon(Icons.delete, size: 25, color: Colors.white),
-                                    ),
-                                  ],
+                      Expanded(
+                        child: tasksForDay.isEmpty
+                            ? Center(
+                                child: Text(
+                                  "No tasks yet. Add something!",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Theme.of(context).hintColor,
+                                  ),
                                 ),
+                              )
+                            : ListView.builder(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                itemCount: filteredTasksForDay.length,
+                                itemBuilder: (context, index) {
+                                  final task = tasksForDay[index];
+                                  final taskKey = GlobalKey();
+                                  double taskHeight = 100;
 
-                                // Task container with tap-to-edit
-                                child: GestureDetector(
-                                  onTap: () {
-                                      _openTaskEditorPage(selectedDate, task: task, index: index);
-                                    },
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 20,
-                                      vertical: 20, 
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: const Color.fromARGB(255, 247, 247, 247), 
-                                      borderRadius: 
-                                        BorderRadius.circular(40),
-                          
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        // Done button
-                                        GestureDetector(
-                                          onTap: () {
-                                            Provider.of<TaskProvider>(context, listen: false)
-                                                  .toggleDone(selectedDate, index);
-                                          },
-                                          child: Container(
-                                            width: 45,
-                                            height: 45,
-                                            alignment: Alignment.center,                                   
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              color: task['done'] ? ctaColor : lightAppBackground,
-                                            ),
-                                            child: task['done']
-                                                ? const Icon(
-                                                    Icons.check,
-                                                    size: 16,
-                                                    color: Colors.white,
-                                                  )
-                                                : null,
-                                          ),
-                                        ),
-                                        
-                                        const SizedBox(width: 15),
+                                  return StatefulBuilder(
+                                    builder: (context, setStateSB) {
+                                      // measure task height
+                                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                                        final renderBox = taskKey.currentContext?.findRenderObject() as RenderBox?;
+                                        if (renderBox != null && renderBox.size.height != taskHeight) {
+                                          setStateSB(() {
+                                            taskHeight = renderBox.size.height;
+                                          });
+                                        }
+                                      });
 
-                                        // Task title + pomodoro info
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                task['title'],
-                                                style: TextStyle(
-                                                  fontSize: 18,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: task['done']
-                                                      ? Theme.of(context).hintColor
-                                                      : Theme.of(context).brightness == Brightness.light
-                                                          ? darkAppBackground
-                                                          : lightAppBackground,
-                                                  decoration: task['done']
-                                                      ? TextDecoration.lineThrough
-                                                      : TextDecoration.none,
-                                                ),
+                                      return Padding(
+                                        padding: const EdgeInsets.only(bottom: 12),
+                                        child: Stack(
+                                          alignment: Alignment.center,
+                                          children: [
+
+                                            // Foreground task box
+                                            Slidable(
+                                              key: Key(task['title'] + index.toString()),
+
+                                              // LEFT SIDE (swipe right)
+                                              startActionPane: ActionPane(
+                                                motion: const BehindMotion(),
+                                                extentRatio: 0.2,
+                                                dismissible: null,
+                                                children: [
+                                                  CustomSlidableAction(
+                                                    onPressed: (context) {
+                                                      debugPrint("Left side action tapped!");
+                                                    },
+                                                    backgroundColor: darkAppBackground,
+                                                    borderRadius: BorderRadius.circular(30),
+                                                    child: Center(
+                                                      child: Icon(
+                                                        Icons.star,
+                                                        color: yellowTextColor,
+                                                        size: 30, // bigger icon
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
-                                              if (task['pomodoros'] > 0)
-                                                Padding(
-                                                  padding: const EdgeInsets.only(top: 4.0),
-                                                  child: Text(
-                                                    "${task['donePomodoros']}/${task['pomodoros']} sessions completed",
-                                                    style: const TextStyle(
-                                                      fontSize: 14,
-                                                      color: Colors.grey,
+
+                                              // RIGHT SIDE (swipe left)
+                                              endActionPane: ActionPane(
+                                                motion: const BehindMotion(),
+                                                extentRatio: 0.2,
+                                                dismissible: DismissiblePane(
+                                                  onDismissed: () {
+                                                    Provider.of<TaskProvider>(context, listen: false)
+                                                        .removeTask(selectedDate, index);
+                                                  },
+                                                ),
+                                                children: [
+                                                  CustomSlidableAction(
+                                                    onPressed: (context) {
+                                                      Provider.of<TaskProvider>(context, listen: false)
+                                                          .removeTask(selectedDate, index);
+                                                    },
+                                                    backgroundColor: darkAppBackground,
+                                                    borderRadius: BorderRadius.circular(30),
+                                                    child: Center(
+                                                      child: Icon(
+                                                        Icons.delete,
+                                                        color: ctaColor,
+                                                        size: 30, // bigger icon
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+
+
+
+                                              child: GestureDetector(
+                                                onTap: () {
+                                                  _openTaskEditorPage(selectedDate, task: task, index: index);
+                                                },
+                                                child: Align(
+                                                  alignment: Alignment.center,
+                                                  child: Container(
+                                                    key: taskKey,
+                                                    width: MediaQuery.of(context).size.width * 0.9,
+                                                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                                                    decoration: BoxDecoration(
+                                                      color: purpleCtaColor,
+                                                      borderRadius: BorderRadius.circular(30),
+                                                    ),
+                                                    child: Row(
+                                                      children: [
+                                                        // Done button
+                                                        GestureDetector(
+                                                          onTap: () {
+                                                            Provider.of<TaskProvider>(
+                                                              context,
+                                                              listen: false,
+                                                            ).toggleDone(selectedDate, index);
+                                                          },
+                                                          child: Container(
+                                                            width: 45,
+                                                            height: 45,
+                                                            alignment: Alignment.center,
+                                                            decoration: BoxDecoration(
+                                                              shape: BoxShape.circle,
+                                                              color: task['done'] ? ctaColor : lightAppBackground,
+                                                            ),
+                                                            child: task['done']
+                                                                ? const Icon(Icons.check, size: 16, color: Colors.white)
+                                                                : null,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(width: 20),
+                                 
+                                                        // Task content
+                                                          Expanded(
+                                                            child: Column(
+                                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                                              children: [
+                                                                // --- Title + Category Row ---
+                                                                Row(
+                                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                                  children: [
+                                                                    // Task Title (left-aligned, expands)
+                                                                    Expanded(
+                                                                      child: Text(
+                                                                        task['title'],
+                                                                        style: TextStyle(
+                                                                          fontSize: 18,
+                                                                          fontWeight: FontWeight.bold,
+                                                                          color: task['done']
+                                                                              ? Theme.of(context).hintColor
+                                                                              : Theme.of(context).brightness == Brightness.light
+                                                                                  ? yellowTextColor
+                                                                                  : lightAppBackground,
+                                                                          decoration: task['done'] ? TextDecoration.lineThrough : null,
+                                                                        ),
+                                                                      ),
+                                                                    ),
+
+                                                                    // Category (right-aligned, if not empty)
+                                                                    if ((task['category'] ?? '').isNotEmpty)
+                                                                      Container(
+                                                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                                                        decoration: BoxDecoration(
+                                                                          color: ctaColor,
+                                                                          borderRadius: BorderRadius.circular(12),
+                                                                        ),
+                                                                        child: Text(
+                                                                          task['category'],
+                                                                          style: TextStyle(
+                                                                            fontSize: 12,
+                                                                            fontWeight: FontWeight.w600,
+                                                                            color: darkAppBackground,
+                                                                          ),
+                                                                        ),
+                                                                      ),
+                                                                  ],
+                                                                ),
+
+                                                                // --- Description ---
+                                                                if ((task['description'] ?? '').isNotEmpty)
+                                                                  Padding(
+                                                                    padding: const EdgeInsets.only(top: 2),
+                                                                    child: Text(
+                                                                      task['description'],
+                                                                      maxLines: 2,
+                                                                      overflow: TextOverflow.ellipsis,
+                                                                      style: TextStyle(
+                                                                        fontSize: 14,
+                                                                        fontWeight: FontWeight.w600,
+                                                                        color: yellowTextColor50,
+                                                                      ),
+                                                                    ),
+                                                                  ),
+
+                                                                // --- Pomodoro sessions ---
+                                                                if (task['pomodoros'] > 0)
+                                                                  Padding(
+                                                                    padding: const EdgeInsets.only(top: 6),
+                                                                    child: Container(
+                                                                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 1),
+                                                                      decoration: BoxDecoration(
+                                                                        color: lightAppBackground,
+                                                                        borderRadius: BorderRadius.circular(12),
+                                                                      ),
+                                                                      child: Text(
+                                                                        "${task['donePomodoros']}/${task['pomodoros']} sessions",
+                                                                        style: TextStyle(
+                                                                          fontSize: 13,
+                                                                          fontWeight: FontWeight.w600,
+                                                                          color: yellowTextColor,
+                                                                        ),
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                              ],
+                                                            ),
+                                                          ),
+
+
+
+                                                      ],
                                                     ),
                                                   ),
                                                 ),
-                                            ],
-                                          ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
+                                      );
+                                    },
+                                  );
+                                },
                               ),
-                            );
-                          },
-                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
 
-          // Add Task button
+          // Floating Add Task button
           Align(
             alignment: Alignment.bottomCenter,
             child: Padding(
@@ -399,11 +563,7 @@ class _TodoPageState extends State<TodoPage> {
                     shape: BoxShape.circle,
                   ),
                   child: const Center(
-                    child: Icon(
-                      Icons.add,
-                      size: 30,
-                      color: Colors.white,
-                    ),
+                    child: Icon(Icons.add, size: 30, color: Colors.white),
                   ),
                 ),
               ),
