@@ -24,7 +24,6 @@ class MyApp extends StatelessWidget {
             title: 'Pomodoro App',
             themeMode: themeProvider.themeMode,
             theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
             home: const TimerPage(),
           );
         },
