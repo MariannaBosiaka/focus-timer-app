@@ -97,12 +97,23 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
     return null;
   }
 
-  void _checkTaskCompletion(TaskProvider taskProvider) {
-    final index = _getSelectedTaskIndex(taskProvider);
-    if (index == null) return;
+    Future<void> _checkTaskCompletion(TaskProvider taskProvider) async {
+    final selectedTaskTitle = taskProvider.selectedTaskTitle;
+    if (selectedTaskTitle == null) return;
 
-    final task = taskProvider.getTasksForDate(DateTime.now())[index];
-    if (task['donePomodoros'] >= task['pomodoros']) {
+    // Fetch the latest tasks from Firestore
+    await taskProvider.fetchTasksForDate(DateTime.now());
+
+    final todayTasks = taskProvider.getTasksForDate(DateTime.now());
+    final task = todayTasks.firstWhere(
+      (t) => t['title'] == selectedTaskTitle,
+      orElse: () => {},
+    );
+
+    if (task.isEmpty) return;
+
+    // Show confetti if task is complete
+    if ((task['donePomodoros'] ?? 0) >= (task['pomodoros'] ?? 0)) {
       _confettiController.play();
       setState(() => _showFinishedMessage = true);
 
@@ -331,22 +342,21 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
                                     timer.pause();
                                   } else {
                                     timer.start(
-                                      onComplete: () {
-                                        final taskProvider =
-                                            Provider.of<TaskProvider>(context, listen: false);
+                                      onComplete: () async {
+                                        final taskProvider = Provider.of<TaskProvider>(context, listen: false);
 
                                         if (timer.selectedMode == 0) {
                                           final index = _getSelectedTaskIndex(taskProvider);
                                           if (index != null) {
-                                            taskProvider.incrementPomodoro(DateTime.now(), index);
+                                            // Increment pomodoro and fetch latest task data
+                                            await taskProvider.incrementPomodoro(DateTime.now(), index);
 
                                             // Trigger confetti & finished message if task done
-                                            _checkTaskCompletion(taskProvider);
+                                            await _checkTaskCompletion(taskProvider);
                                           }
 
                                           timer.completedFocusSessions++;
-                                          timer.setMode(
-                                              timer.completedFocusSessions % 4 == 0 ? 2 : 1);
+                                          timer.setMode(timer.completedFocusSessions % 4 == 0 ? 2 : 1);
                                           timer.reset();
                                         } else {
                                           timer.setMode(0);
@@ -359,8 +369,7 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
                                 style: TextButton.styleFrom(
                                   backgroundColor: ctaColor,
                                   padding: const EdgeInsets.symmetric(horizontal: 35, vertical: 12),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(50)),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
                                   minimumSize: const Size(0, 0),
                                 ),
                                 child: Text(

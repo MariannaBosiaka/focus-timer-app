@@ -46,11 +46,15 @@ class _TodoPageState extends State<TodoPage> {
 
 
   void _openTaskEditorPage(
-    DateTime selectedDate, {
-    Map<String, dynamic>? task,
-    int? index,
-  }) {
-    Navigator.push(
+  DateTime selectedDate, {
+  Map<String, dynamic>? task,
+  int? index,
+  }) async {
+    // Small delay ensures rebuild happens before navigation
+    await Future.delayed(Duration(milliseconds: 50));
+
+    // Navigate to Add/Edit task page
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => AddEditTasksPage(
@@ -60,7 +64,9 @@ class _TodoPageState extends State<TodoPage> {
         ),
       ),
     );
+
   }
+
 
   List<List<DateTime>> _generateWeeks() {
     List<List<DateTime>> weeks = [];
@@ -321,7 +327,7 @@ class _TodoPageState extends State<TodoPage> {
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                                 itemCount: filteredTasksForDay.length,
                                 itemBuilder: (context, index) {
-                                  final task = tasksForDay[index];
+                                  final task = filteredTasksForDay[index];
                                   final taskKey = GlobalKey();
                                   double taskHeight = 100;
 
@@ -345,7 +351,7 @@ class _TodoPageState extends State<TodoPage> {
 
                                             // Foreground task box
                                             Slidable(
-                                              key: Key(task['title'] + index.toString()),
+                                              key: ValueKey("${task['title']}_${index}_${_selectedFilter}_${selectedDate.toIso8601String()}"),
 
                                               // LEFT SIDE (swipe right)
                                               startActionPane: ActionPane(
@@ -356,11 +362,7 @@ class _TodoPageState extends State<TodoPage> {
                                                   CustomSlidableAction(
                                                     onPressed: (context) {
                                                       final taskProvider = Provider.of<TaskProvider>(context, listen: false);
-
-                                                      // Set the selected task in the provider
                                                       taskProvider.setSelectedTaskTitle(task['title']);
-
-                                                      // Navigate to TimerPage
                                                       Navigator.push(
                                                         context,
                                                         MaterialPageRoute(builder: (_) => const TimerPage()),
@@ -372,48 +374,49 @@ class _TodoPageState extends State<TodoPage> {
                                                       child: Icon(
                                                         Icons.star,
                                                         color: yellowTextColor,
-                                                        size: 30, // bigger icon
+                                                        size: 30,
                                                       ),
                                                     ),
                                                   ),
-
                                                 ],
                                               ),
-
 
                                               // RIGHT SIDE (swipe left)
                                               endActionPane: ActionPane(
                                                 motion: const BehindMotion(),
                                                 extentRatio: 0.2,
                                                 dismissible: DismissiblePane(
-                                                  onDismissed: () {
-                                                    Provider.of<TaskProvider>(context, listen: false)
-                                                        .removeTask(selectedDate, index);
+                                                  onDismissed: () async {
+                                                    final provider = Provider.of<TaskProvider>(context, listen: false);
+                                                    await provider.removeTask(selectedDate, index);
                                                   },
                                                 ),
                                                 children: [
                                                   CustomSlidableAction(
-                                                    onPressed: (context) {
-                                                      Provider.of<TaskProvider>(context, listen: false)
-                                                          .removeTask(selectedDate, index);
+                                                    onPressed: (context) async {
+                                                      final provider = Provider.of<TaskProvider>(context, listen: false);
+                                                      await provider.removeTask(selectedDate, index);
                                                     },
                                                     backgroundColor: darkAppBackground,
                                                     borderRadius: BorderRadius.circular(30),
-                                                    child: Center(
+                                                    child: const Center(
                                                       child: Icon(
                                                         Icons.delete,
                                                         color: ctaColor,
-                                                        size: 30, // bigger icon
+                                                        size: 30,
                                                       ),
                                                     ),
                                                   ),
                                                 ],
                                               ),
 
-
-
                                               child: GestureDetector(
                                                 onTap: () {
+
+                                                  if (task['done'] == true) {
+                                                    return;
+                                                  }
+
                                                   _openTaskEditorPage(selectedDate, task: task, index: index);
                                                 },
                                                 child: Align(
@@ -450,92 +453,89 @@ class _TodoPageState extends State<TodoPage> {
                                                           ),
                                                         ),
                                                         const SizedBox(width: 20),
-                                 
+
                                                         // Task content
-                                                          Expanded(
-                                                            child: Column(
-                                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                                              children: [
-                                                                // --- Title + Category Row ---
-                                                                Row(
-                                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                                  children: [
-                                                                    // Task Title (left-aligned, expands)
-                                                                    Expanded(
-                                                                      child: Text(
-                                                                        task['title'],
-                                                                        style: TextStyle(
-                                                                          fontSize: 18,
-                                                                          fontWeight: FontWeight.bold,
-                                                                          color: task['done']
-                                                                              ? Theme.of(context).hintColor
-                                                                              : Theme.of(context).brightness == Brightness.light
-                                                                                  ? yellowTextColor
-                                                                                  : lightAppBackground,
-                                                                          decoration: task['done'] ? TextDecoration.lineThrough : null,
-                                                                        ),
-                                                                      ),
-                                                                    ),
-
-                                                                    // Category (right-aligned, if not empty)
-                                                                    if ((task['category'] ?? '').isNotEmpty)
-                                                                      Container(
-                                                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                                                        decoration: BoxDecoration(
-                                                                          color: ctaColor,
-                                                                          borderRadius: BorderRadius.circular(12),
-                                                                        ),
-                                                                        child: Text(
-                                                                          task['category'],
-                                                                          style: TextStyle(
-                                                                            fontSize: 12,
-                                                                            fontWeight: FontWeight.w600,
-                                                                            color: darkAppBackground,
-                                                                          ),
-                                                                        ),
-                                                                      ),
-                                                                  ],
-                                                                ),
-
-                                                                // --- Description ---
-                                                                if ((task['description'] ?? '').isNotEmpty)
-                                                                  Padding(
-                                                                    padding: const EdgeInsets.only(top: 2),
+                                                        Expanded(
+                                                          child: Column(
+                                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                                            children: [
+                                                              // Title + Category
+                                                              Row(
+                                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                                children: [
+                                                                  Expanded(
                                                                     child: Text(
-                                                                      task['description'],
-                                                                      maxLines: 2,
-                                                                      overflow: TextOverflow.ellipsis,
+                                                                      task['title'],
                                                                       style: TextStyle(
-                                                                        fontSize: 14,
-                                                                        fontWeight: FontWeight.w600,
-                                                                        color: yellowTextColor50,
+                                                                        fontSize: 18,
+                                                                        fontWeight: FontWeight.bold,
+                                                                        color: task['done']
+                                                                            ? Theme.of(context).hintColor
+                                                                            : Theme.of(context).brightness == Brightness.light
+                                                                                ? yellowTextColor
+                                                                                : lightAppBackground,
+                                                                        decoration: task['done'] ? TextDecoration.lineThrough : null,
                                                                       ),
                                                                     ),
                                                                   ),
-
-                                                                // --- Pomodoro sessions ---
-                                                                if (task['pomodoros'] > 0)
-                                                                  Padding(
-                                                                    padding: const EdgeInsets.only(top: 6),
-                                                                    child: Container(
-                                                                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 1),
+                                                                  if ((task['category'] ?? '').isNotEmpty)
+                                                                    Container(
+                                                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                                                                       decoration: BoxDecoration(
-                                                                        color: lightAppBackground,
+                                                                        color: ctaColor,
                                                                         borderRadius: BorderRadius.circular(12),
                                                                       ),
                                                                       child: Text(
-                                                                        "${task['donePomodoros']}/${task['pomodoros']} sessions",
+                                                                        task['category'],
                                                                         style: TextStyle(
-                                                                          fontSize: 13,
+                                                                          fontSize: 12,
                                                                           fontWeight: FontWeight.w600,
-                                                                          color: yellowTextColor,
+                                                                          color: darkAppBackground,
                                                                         ),
                                                                       ),
                                                                     ),
+                                                                ],
+                                                              ),
+
+                                                              // Description
+                                                              if ((task['description'] ?? '').isNotEmpty)
+                                                                Padding(
+                                                                  padding: const EdgeInsets.only(top: 2),
+                                                                  child: Text(
+                                                                    task['description'],
+                                                                    maxLines: 2,
+                                                                    overflow: TextOverflow.ellipsis,
+                                                                    style: TextStyle(
+                                                                      fontSize: 14,
+                                                                      fontWeight: FontWeight.w600,
+                                                                      color: yellowTextColor50,
+                                                                    ),
                                                                   ),
-                                                              ],
-                                                            ),
+                                                                ),
+
+                                                              // Pomodoro sessions
+                                                              if (task['pomodoros'] > 0)
+                                                                Padding(
+                                                                  padding: const EdgeInsets.only(top: 6),
+                                                                  child: Container(
+                                                                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 1),
+                                                                    decoration: BoxDecoration(
+                                                                      color: lightAppBackground,
+                                                                      borderRadius: BorderRadius.circular(12),
+                                                                    ),
+                                                                    child: Text(
+                                                                      "${task['donePomodoros']}/${task['pomodoros']} sessions",
+                                                                      style: TextStyle(
+                                                                        fontSize: 13,
+                                                                        fontWeight: FontWeight.w600,
+                                                                        color: yellowTextColor,
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                            ],
                                                           ),
+                                                        ),
                                                       ],
                                                     ),
                                                   ),
@@ -550,6 +550,7 @@ class _TodoPageState extends State<TodoPage> {
                                 },
                               ),
                       ),
+
                     ],
                   ),
                 ),

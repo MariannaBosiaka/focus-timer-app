@@ -97,6 +97,7 @@ class _AddEditTasksPageState extends State<AddEditTasksPage> {
   } else if (_selectedSymbol != '-' && _selectedSymbol != 'custom') {
     selectedPomodoros = int.tryParse(_selectedSymbol) ?? 0;
   }
+
   _pomodoros = selectedPomodoros;
 
   final taskData = {
@@ -109,37 +110,32 @@ class _AddEditTasksPageState extends State<AddEditTasksPage> {
     'shortBreak': _shortBreak,
     'longBreak': _longBreak,
     'category': _selectedCategory ?? '',
-    'date': Timestamp.fromDate(DateTime(
-      widget.selectedDate.year,
-      widget.selectedDate.month,
-      widget.selectedDate.day,
-    )), // use Firestore Timestamp
   };
 
   try {
-    final FirebaseFirestore firestore = FirebaseFirestore.instance;
-
     if (widget.task == null || widget.task!['id'] == null) {
-      // CREATE new task
-      final docRef = await firestore.collection('tasks').add(taskData);
-      taskData['id'] = docRef.id;
-      provider.addTask(widget.selectedDate, taskData);
+      // New task → add via provider
+      await provider.addTask(widget.selectedDate, {
+        ...taskData,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
     } else {
-      // UPDATE existing task
+      // Existing task → update via provider
       final taskId = widget.task!['id'];
-      await firestore.collection('tasks').doc(taskId).set(taskData, SetOptions(merge: true));
-      taskData['id'] = taskId;
-      provider.updateTask(widget.selectedDate, widget.index!, taskData);
+      await provider.updateTask(widget.selectedDate, widget.index!, {
+        ...taskData,
+        'id': taskId,
+      });
     }
 
     Navigator.pop(context);
-    } catch (e) {
-      print("Error saving task: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to save task. Try again.')),
-      );
-    }
+  } catch (e) {
+    print("Error saving task: $e");
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Failed to save task. Try again.')),
+    );
   }
+}
 
 
   int get _currentValue {
