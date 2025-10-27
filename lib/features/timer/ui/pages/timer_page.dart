@@ -75,6 +75,13 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
     );
   }
 
+  double get timerProgress {
+    final timer = Provider.of<TimerController>(context, listen: true);
+    if (timer.initialSeconds == 0) return 0.0;
+    return 1.0 - (timer.remainingSeconds / timer.initialSeconds);
+  }
+
+
   String formatTime(int seconds) {
     final minutes = (seconds ~/ 60).toString().padLeft(2, '0');
     final secs = (seconds % 60).toString().padLeft(2, '0');
@@ -269,13 +276,14 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
                                                 ),
                                                 child: Text(
                                                   _modes[index],
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .headlineSmall!
-                                                      .copyWith(
-                                                        fontWeight: FontWeight.bold,
-                                                        color: Theme.of(context).iconTheme.color,
-                                                      ),
+                                                  style: TextStyle
+                                                  (
+                                                    
+                                                    fontWeight: FontWeight.bold,
+                                                    color: timer.isRunning ? purpleCtaColor : darkAppBackground,
+                                                    fontSize: 25
+                          
+                                                  ),
                                                 ),
                                               ),
                                             ),
@@ -333,6 +341,52 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
                                 },
                               ),
 
+                              const SizedBox(height: 20),
+
+                            if (timer.isRunning)       
+                              // Smooth White Progress Line with margin
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 60),
+                                child: SizedBox(
+                                  height: 8, // total height of the bar
+                                  child: Stack(
+                                    alignment: Alignment.centerLeft,
+                                    children: [
+                                      // Base thin grey line
+                                      Container(
+                                        height: 2,
+                                        decoration: BoxDecoration(
+                                          color: yellowTextColor.withOpacity(0.3),
+                                          borderRadius: BorderRadius.circular(1),
+                                        ),
+                                      ),
+
+                                      // Animated thicker white line filling as timer progresses
+                                      AnimatedBuilder(
+                                        animation: Provider.of<TimerController>(context),
+                                        builder: (context, child) {
+                                          final progress = timerProgress; // 0.0 -> 1.0
+                                          return Align(
+                                            alignment: Alignment.centerLeft,
+                                            child: FractionallySizedBox(
+                                              widthFactor: progress,
+                                              child: Container(
+                                                height: 4, // thicker than the base line
+                                                decoration: BoxDecoration(
+                                                  color: yellowTextColor,
+                                                  borderRadius: BorderRadius.circular(3),
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+
+
                               const SizedBox(height: 50),
 
                               // Start/Pause Button
@@ -367,14 +421,22 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
                                   }
                                 },
                                 style: TextButton.styleFrom(
-                                  backgroundColor: ctaColor,
+                                  backgroundColor: timer.isRunning 
+                                                      ? purpleCtaColor : ctaColor,
+                                  
                                   padding: const EdgeInsets.symmetric(horizontal: 35, vertical: 12),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
                                   minimumSize: const Size(0, 0),
                                 ),
                                 child: Text(
                                   buttonText(timer),
-                                  style: const TextStyle(fontSize: 17),
+                                  style: TextStyle
+                                  (
+                                    fontSize: 17,
+                                    color: timer.isRunning
+                                                ? yellowTextColor
+                                                : Theme.of(context).iconTheme.color,
+                                  ),
                                   textAlign: TextAlign.center,
                                 ),
                               ),
@@ -386,7 +448,7 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
                                         onPressed: timer.reset,
                                         icon: const Icon(Icons.refresh),
                                         tooltip: 'Reset Timer',
-                                        color: Theme.of(context).iconTheme.color,
+                                        color: purpleCtaColor,
                                         iconSize: 30,
                                       )
                                     : null,
