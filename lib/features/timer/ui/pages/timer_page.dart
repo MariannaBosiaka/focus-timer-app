@@ -121,10 +121,14 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
 
     // Show confetti if task is complete
     if ((task['donePomodoros'] ?? 0) >= (task['pomodoros'] ?? 0)) {
+      if (!mounted) return; 
       _confettiController.play();
       setState(() => _showFinishedMessage = true);
 
       Future.delayed(const Duration(seconds: 3), () {
+
+        if (!mounted) return; 
+
         if (mounted) {
           setState(() => _showFinishedMessage = false);
         }
@@ -142,7 +146,9 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
       color: timer.isRunning ? darkAppBackground : lightAppBackground,
       child: PageView(
         controller: _mainPageController,
-        physics: const PageScrollPhysics(),
+        physics: timer.isRunning
+          ? const NeverScrollableScrollPhysics() // disable swipe when running
+          : const PageScrollPhysics(),          // enable swipe otherwise
         children: [
           // === Timer Screen ===
           _buildFadingPage(
@@ -187,17 +193,18 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
                       child: AnimatedOpacity(
                         duration: const Duration(milliseconds: 500),
                         opacity: _showFinishedMessage ? 1 : 0,
+                        // opacity: 1, for testing purposes
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                           decoration: BoxDecoration(
-                            color: ctaColor.withOpacity(0.9),
+                            color: purpleCtaColor,
                             borderRadius: BorderRadius.circular(30),
                           ),
                           child: const Text(
                             "🎉 Task Finished!",
                             style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w600,
                               color: Colors.white,
                             ),
                           ),
@@ -258,6 +265,10 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
 
                                     return PageView.builder(
                                       controller: _modePageController,
+                                      // enable scrolling between modes only when timer is stopped
+                                      physics: timer.isRunning
+                                      ? const NeverScrollableScrollPhysics()
+                                      : const PageScrollPhysics(), 
                                       itemCount: _modes.length,
                                       onPageChanged: (index) => timer.setMode(index),
                                       itemBuilder: (context, index) {
@@ -278,11 +289,9 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
                                                   _modes[index],
                                                   style: TextStyle
                                                   (
-                                                    
-                                                    fontWeight: FontWeight.bold,
-                                                    color: timer.isRunning ? purpleCtaColor : darkAppBackground,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: timer.isRunning ? yellowTextColor : darkAppBackground,
                                                     fontSize: 25
-                          
                                                   ),
                                                 ),
                                               ),
@@ -295,7 +304,7 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
                                 ),
                               ),
 
-                              const SizedBox(height: 50),
+                              const SizedBox(height: 40),
 
                               // Timer display
                               TweenAnimationBuilder<double>(
@@ -341,12 +350,11 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
                                 },
                               ),
 
-                              const SizedBox(height: 20),
 
                             if (timer.isRunning)       
                               // Smooth White Progress Line with margin
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 60),
+                                padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 30),
                                 child: SizedBox(
                                   height: 8, // total height of the bar
                                   child: Stack(
@@ -387,7 +395,7 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
                               ),
 
 
-                              const SizedBox(height: 50),
+                              const SizedBox(height: 40),
 
                               // Start/Pause Button
                               TextButton(
@@ -412,6 +420,7 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
                                           timer.completedFocusSessions++;
                                           timer.setMode(timer.completedFocusSessions % 4 == 0 ? 2 : 1);
                                           timer.reset();
+                                          
                                         } else {
                                           timer.setMode(0);
                                           timer.reset();
