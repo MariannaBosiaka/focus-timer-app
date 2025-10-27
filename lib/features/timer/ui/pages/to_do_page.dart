@@ -30,11 +30,10 @@ class _TodoPageState extends State<TodoPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final taskProvider = Provider.of<TaskProvider>(context, listen: false);
 
-      if (taskProvider.selectedDate == null) {
-        taskProvider.setSelectedDate(DateTime.now());
-      }
+      // Fetch tasks for the selected date from Firestore
+      taskProvider.fetchTasksForDate(taskProvider.selectedDate);
 
-      final selectedDate = taskProvider.selectedDate!;
+      final selectedDate = taskProvider.selectedDate;
       final weekIndex = _getWeekIndexForDate(selectedDate);
 
       Future.delayed(Duration.zero, () {
@@ -44,6 +43,7 @@ class _TodoPageState extends State<TodoPage> {
       });
     });
   }
+
 
   void _openTaskEditorPage(
     DateTime selectedDate, {

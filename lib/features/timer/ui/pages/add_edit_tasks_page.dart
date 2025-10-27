@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../themes/colors.dart';
 import '../../logic/task_provider.dart';
-import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AddEditTasksPage extends StatefulWidget {
   final DateTime selectedDate;
@@ -48,7 +48,6 @@ class _AddEditTasksPageState extends State<AddEditTasksPage> {
 
   final FocusNode _customNumberFocusNode = FocusNode();
 
-
   // Selected mode
   String _selectedMode = "Focus";
 
@@ -82,44 +81,64 @@ class _AddEditTasksPageState extends State<AddEditTasksPage> {
   void dispose() {
     _taskController.dispose();
     _descriptionController.dispose();
-    _customNumberFocusNode.dispose(); 
+    _customNumberFocusNode.dispose();
     super.dispose();
   }
 
+  Future<void> _saveTask() async {
+  final text = _taskController.text.trim();
+  if (text.isEmpty) return;
 
-  void _saveTask() {
-    final text = _taskController.text.trim();
-    if (text.isEmpty) return;
+  final provider = Provider.of<TaskProvider>(context, listen: false);
 
-    final provider = Provider.of<TaskProvider>(context, listen: false);
+  int selectedPomodoros = 0;
+  if (_selectedSymbol == 'custom' && _customNumberController.text.isNotEmpty) {
+    selectedPomodoros = int.tryParse(_customNumberController.text) ?? 0;
+  } else if (_selectedSymbol != '-' && _selectedSymbol != 'custom') {
+    selectedPomodoros = int.tryParse(_selectedSymbol) ?? 0;
+  }
+  _pomodoros = selectedPomodoros;
 
-    int selectedPomodoros = 0;
-    if (_selectedSymbol == 'custom' && _customNumberController.text.isNotEmpty) {
-      selectedPomodoros = int.tryParse(_customNumberController.text) ?? 0;
-    } else if (_selectedSymbol != '-' && _selectedSymbol != 'custom') {
-      selectedPomodoros = int.tryParse(_selectedSymbol) ?? 0;
-    }
-    _pomodoros = selectedPomodoros;
+  final taskData = {
+    'title': text,
+    'description': _descriptionController.text.trim(),
+    'done': widget.task?['done'] ?? false,
+    'pomodoros': _pomodoros,
+    'donePomodoros': widget.task?['donePomodoros'] ?? 0,
+    'focusLength': _focusLength,
+    'shortBreak': _shortBreak,
+    'longBreak': _longBreak,
+    'category': _selectedCategory ?? '',
+    'date': Timestamp.fromDate(DateTime(
+      widget.selectedDate.year,
+      widget.selectedDate.month,
+      widget.selectedDate.day,
+    )), // use Firestore Timestamp
+  };
 
-    final newTask = {
-      'title': text,
-      'description': _descriptionController.text.trim(),
-      'done': widget.task?['done'] ?? false,
-      'pomodoros': _pomodoros,
-      'donePomodoros': widget.task?['donePomodoros'] ?? 0,
-      'focusLength': _focusLength,
-      'shortBreak': _shortBreak,
-      'longBreak': _longBreak,
-      'category': _selectedCategory ?? '',
-    };
+  try {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
-    if (widget.task == null) {
-      provider.addTask(widget.selectedDate, newTask);
+    if (widget.task == null || widget.task!['id'] == null) {
+      // CREATE new task
+      final docRef = await firestore.collection('tasks').add(taskData);
+      taskData['id'] = docRef.id;
+      provider.addTask(widget.selectedDate, taskData);
     } else {
-      provider.updateTask(widget.selectedDate, widget.index!, newTask);
+      // UPDATE existing task
+      final taskId = widget.task!['id'];
+      await firestore.collection('tasks').doc(taskId).set(taskData, SetOptions(merge: true));
+      taskData['id'] = taskId;
+      provider.updateTask(widget.selectedDate, widget.index!, taskData);
     }
 
     Navigator.pop(context);
+    } catch (e) {
+      print("Error saving task: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to save task. Try again.')),
+      );
+    }
   }
 
 
@@ -209,9 +228,11 @@ class _AddEditTasksPageState extends State<AddEditTasksPage> {
           SingleChildScrollView(
             padding: EdgeInsets.fromLTRB(
               40,
-              MediaQuery.of(context).size.height * 0.1, // responsive top padding
+              MediaQuery.of(context).size.height *
+                  0.1, // responsive top padding
               40,
-              MediaQuery.of(context).size.height * 0.335, // bottom padding for button
+              MediaQuery.of(context).size.height *
+                  0.335, // bottom padding for button
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -253,7 +274,8 @@ class _AddEditTasksPageState extends State<AddEditTasksPage> {
                         },
                         child: Container(
                           margin: EdgeInsets.only(
-                              right: MediaQuery.of(context).size.width * 0.02),
+                            right: MediaQuery.of(context).size.width * 0.02,
+                          ),
                           width: MediaQuery.of(context).size.width * 0.08,
                           height: MediaQuery.of(context).size.width * 0.08,
                           decoration: BoxDecoration(
@@ -267,7 +289,9 @@ class _AddEditTasksPageState extends State<AddEditTasksPage> {
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                                 color:
-                                    isSelected ? darkAppBackground : yellowTextColor,
+                                    isSelected
+                                        ? darkAppBackground
+                                        : yellowTextColor,
                               ),
                             ),
                           ),
@@ -314,19 +338,21 @@ class _AddEditTasksPageState extends State<AddEditTasksPage> {
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: (_customNumberFocusNode.hasFocus ||
-                                    _selectedSymbol == 'custom')
-                                ? darkAppBackground
-                                : yellowTextColor,
+                            color:
+                                (_customNumberFocusNode.hasFocus ||
+                                        _selectedSymbol == 'custom')
+                                    ? darkAppBackground
+                                    : yellowTextColor,
                           ),
                           decoration: InputDecoration(
                             counterText: "",
                             contentPadding: EdgeInsets.zero,
                             filled: true,
-                            fillColor: (_customNumberFocusNode.hasFocus ||
-                                    _selectedSymbol == 'custom')
-                                ? ctaColor
-                                : purpleCtaColor,
+                            fillColor:
+                                (_customNumberFocusNode.hasFocus ||
+                                        _selectedSymbol == 'custom')
+                                    ? ctaColor
+                                    : purpleCtaColor,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
                               borderSide: BorderSide.none,
@@ -335,7 +361,8 @@ class _AddEditTasksPageState extends State<AddEditTasksPage> {
                           inputFormatters: [
                             FilteringTextInputFormatter.digitsOnly,
                             FilteringTextInputFormatter.allow(
-                                RegExp(r'^([1-9][0-9]?|0)$')), // 0–99
+                              RegExp(r'^([1-9][0-9]?|0)$'),
+                            ), // 0–99
                           ],
                           onChanged: (value) {
                             setState(() {
@@ -352,8 +379,6 @@ class _AddEditTasksPageState extends State<AddEditTasksPage> {
                     ),
                   ],
                 ),
-
-
 
                 SizedBox(height: MediaQuery.of(context).size.height * 0.03),
 
@@ -381,36 +406,46 @@ class _AddEditTasksPageState extends State<AddEditTasksPage> {
                 SizedBox(height: MediaQuery.of(context).size.height * 0.02),
 
                 Wrap(
-                  spacing: MediaQuery.of(context).size.width * 0.03, // horizontal spacing
-                  runSpacing: MediaQuery.of(context).size.height * 0.015, // vertical spacing
-                  children: _categories.map((category) {
-                    final isSelected = _selectedCategory == category;
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _selectedCategory = isSelected ? null : category;
-                        });
-                      },
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          vertical: MediaQuery.of(context).size.height * 0.012,
-                          horizontal: MediaQuery.of(context).size.width * 0.07,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isSelected ? ctaColor : purpleCtaColor,
-                          borderRadius: BorderRadius.circular(50),
-                        ),
-                        child: Text(
-                          category,
-                          style: TextStyle(
-                            color: isSelected ? darkAppBackground : yellowTextColor,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
+                  spacing:
+                      MediaQuery.of(context).size.width *
+                      0.03, // horizontal spacing
+                  runSpacing:
+                      MediaQuery.of(context).size.height *
+                      0.015, // vertical spacing
+                  children:
+                      _categories.map((category) {
+                        final isSelected = _selectedCategory == category;
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedCategory = isSelected ? null : category;
+                            });
+                          },
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              vertical:
+                                  MediaQuery.of(context).size.height * 0.012,
+                              horizontal:
+                                  MediaQuery.of(context).size.width * 0.07,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSelected ? ctaColor : purpleCtaColor,
+                              borderRadius: BorderRadius.circular(50),
+                            ),
+                            child: Text(
+                              category,
+                              style: TextStyle(
+                                color:
+                                    isSelected
+                                        ? darkAppBackground
+                                        : yellowTextColor,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
+                        );
+                      }).toList(),
                 ),
               ],
             ),
@@ -420,16 +455,21 @@ class _AddEditTasksPageState extends State<AddEditTasksPage> {
           Positioned(
             left: 0,
             right: 0,
-            bottom: MediaQuery.of(context).size.height * 0.02, // responsive bottom
+            bottom:
+                MediaQuery.of(context).size.height * 0.02, // responsive bottom
             child: Center(
               child: SizedBox(
-                width: MediaQuery.of(context).size.width * 0.7, // responsive button width
+                width:
+                    MediaQuery.of(context).size.width *
+                    0.7, // responsive button width
                 child: TextButton(
                   onPressed: _saveTask,
                   style: TextButton.styleFrom(
                     backgroundColor: ctaColor,
                     padding: EdgeInsets.symmetric(
-                      vertical: MediaQuery.of(context).size.height * 0.018, // responsive vertical padding
+                      vertical:
+                          MediaQuery.of(context).size.height *
+                          0.018, // responsive vertical padding
                     ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(50),
@@ -450,7 +490,7 @@ class _AddEditTasksPageState extends State<AddEditTasksPage> {
             ),
           ),
         ],
-      )
+      ),
     );
   }
 
