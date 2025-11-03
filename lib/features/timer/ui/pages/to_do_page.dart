@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../../../themes/colors.dart';
 import '../../logic/task_provider.dart';
+import '../../logic/timer_controller.dart';
 import 'package:provider/provider.dart';
 import 'add_edit_tasks_page.dart';
 import '../../../timer/ui/pages/timer_page.dart';
@@ -362,7 +363,9 @@ class _TodoPageState extends State<TodoPage> {
                                                   CustomSlidableAction(
                                                     onPressed: (context) {
                                                       final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+                                                      final timerController = Provider.of<TimerController>(context, listen: false);
                                                       taskProvider.setSelectedTaskTitle(task['title']);
+                                                      timerController.setMode(0);
                                                       Navigator.push(
                                                         context,
                                                         MaterialPageRoute(builder: (_) => const TimerPage()),

@@ -7,6 +7,7 @@ import '../../logic/timer_controller.dart';
 import '../../logic/task_provider.dart';
 import '../pages/set_timer_page.dart';
 import '../pages/to_do_page.dart';
+import 'dart:math';
 
 class TimerPage extends StatefulWidget {
   const TimerPage({super.key});
@@ -23,6 +24,8 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
   late final ConfettiController _confettiController;
 
   bool _showFinishedMessage = false;
+  String? _lastTaskTitle;
+
 
   @override
   void initState() {
@@ -75,12 +78,60 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
     );
   }
 
+  int? _getSelectedTaskIndex(TaskProvider taskProvider) {
+    final selectedTaskTitle = taskProvider.selectedTaskTitle;
+    final tasks = taskProvider.getTasksForDate(DateTime.now());
+    if (selectedTaskTitle == null) return null;
+
+    // Reset completedFocusSessions if task changed
+    if (_lastTaskTitle != selectedTaskTitle) {
+      _lastTaskTitle = selectedTaskTitle;
+      Provider.of<TimerController>(context, listen: false).completedFocusSessions = 0;
+    }
+
+    for (int i = 0; i < tasks.length; i++) {
+      if (tasks[i]['title'] == selectedTaskTitle) return i;
+    }
+    return null;
+  }
+
+
+
+  final List<String> _motivationalMessages = [
+    "Let’s crush: {task} 💪",
+    "Stay focused on: {task} 🔥",
+    "You got this: {task} 🚀",
+    "In the zone: {task}",
+    "Focus power: {task} ⚡",
+  ];
+
+  final Map<String, String> _taskMotivationalCache = {};
+
+  String getMotivationalText(String taskTitle) {
+    // If we already have a message for this task, return it
+    if (_taskMotivationalCache.containsKey(taskTitle)) {
+      return _taskMotivationalCache[taskTitle]!;
+    }
+
+    // Otherwise, pick a random one and store it
+    final random = Random();
+    final message = _motivationalMessages[random.nextInt(_motivationalMessages.length)]
+        .replaceAll("{task}", taskTitle);
+    _taskMotivationalCache[taskTitle] = message;
+    return message;
+  }
+
+  // Optional: clear the cache when task completes
+  void clearTaskMessage(String taskTitle) {
+    _taskMotivationalCache.remove(taskTitle);
+  }
+
+
   double get timerProgress {
     final timer = Provider.of<TimerController>(context, listen: true);
     if (timer.initialSeconds == 0) return 0.0;
     return 1.0 - (timer.remainingSeconds / timer.initialSeconds);
   }
-
 
   String formatTime(int seconds) {
     final minutes = (seconds ~/ 60).toString().padLeft(2, '0');
@@ -94,23 +145,11 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
     return 'Start';
   }
 
-  int? _getSelectedTaskIndex(TaskProvider taskProvider) {
-    final selectedTaskTitle = taskProvider.selectedTaskTitle;
-    final tasks = taskProvider.getTasksForDate(DateTime.now());
-    if (selectedTaskTitle == null) return null;
-    for (int i = 0; i < tasks.length; i++) {
-      if (tasks[i]['title'] == selectedTaskTitle) return i;
-    }
-    return null;
-  }
-
-    Future<void> _checkTaskCompletion(TaskProvider taskProvider) async {
+  Future<void> _checkTaskCompletion(TaskProvider taskProvider) async {
     final selectedTaskTitle = taskProvider.selectedTaskTitle;
     if (selectedTaskTitle == null) return;
 
-    // Fetch the latest tasks from Firestore
     await taskProvider.fetchTasksForDate(DateTime.now());
-
     final todayTasks = taskProvider.getTasksForDate(DateTime.now());
     final task = todayTasks.firstWhere(
       (t) => t['title'] == selectedTaskTitle,
@@ -119,19 +158,14 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
 
     if (task.isEmpty) return;
 
-    // Show confetti if task is complete
     if ((task['donePomodoros'] ?? 0) >= (task['pomodoros'] ?? 0)) {
-      if (!mounted) return; 
+      if (!mounted) return;
       _confettiController.play();
       setState(() => _showFinishedMessage = true);
 
       Future.delayed(const Duration(seconds: 3), () {
-
-        if (!mounted) return; 
-
-        if (mounted) {
-          setState(() => _showFinishedMessage = false);
-        }
+        if (!mounted) return;
+        setState(() => _showFinishedMessage = false);
       });
     }
   }
@@ -147,8 +181,8 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
       child: PageView(
         controller: _mainPageController,
         physics: timer.isRunning
-          ? const NeverScrollableScrollPhysics() // disable swipe when running
-          : const PageScrollPhysics(),          // enable swipe otherwise
+            ? const NeverScrollableScrollPhysics()
+            : const PageScrollPhysics(),
         children: [
           // === Timer Screen ===
           _buildFadingPage(
@@ -164,17 +198,17 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
               body: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Confetti from top
+                  // Confetti
                   Align(
                     alignment: Alignment.topCenter,
                     child: ConfettiWidget(
                       confettiController: _confettiController,
-                      blastDirectionality: BlastDirectionality.explosive, // downward    // many particles quickly
-                      numberOfParticles: 60,    // high number
+                      blastDirectionality: BlastDirectionality.explosive,
+                      numberOfParticles: 60,
                       maxBlastForce: 30,
                       minBlastForce: 15,
-                      gravity: 0.3,              // fall naturally
-                      shouldLoop: false,         // play only once
+                      gravity: 0.3,
+                      shouldLoop: false,
                       colors: const [
                         Colors.yellow,
                         Colors.purple,
@@ -182,18 +216,17 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
                         Colors.red,
                         Colors.green,
                         Colors.orange
-                      ],// optional: make custom shapes
+                      ],
                     ),
                   ),
 
-                  // Finished Task Message
+                  // === Finished Task Message ===
                   if (_showFinishedMessage)
                     Positioned(
                       top: 150,
                       child: AnimatedOpacity(
                         duration: const Duration(milliseconds: 500),
                         opacity: _showFinishedMessage ? 1 : 0,
-                        // opacity: 1, for testing purposes
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                           decoration: BoxDecoration(
@@ -212,7 +245,77 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
                       ),
                     ),
 
-                  // Main Timer Column
+                  Consumer2<TaskProvider, TimerController>(
+                    builder: (context, taskProvider, timerController, _) {
+                      final selectedTaskTitle = taskProvider.selectedTaskTitle;
+                      if (selectedTaskTitle == null) return const SizedBox.shrink();
+
+                      final todayTasks = taskProvider.getTasksForDate(DateTime.now());
+                      final task = todayTasks.firstWhere(
+                        (t) => t['title'] == selectedTaskTitle,
+                        orElse: () => {},
+                      );
+
+                      if (task.isEmpty || (task['donePomodoros'] >= task['pomodoros'])) {
+                        return const SizedBox.shrink();
+                      }
+
+                      final isFocusMode = timerController.selectedMode == 0;
+                      final isRunning = timerController.isRunning;
+
+                      // Hide during breaks
+                      if (!isFocusMode && isRunning) return const SizedBox.shrink();
+
+                      return Positioned(
+                        top: 150,
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 400),
+                          transitionBuilder: (child, animation) =>
+                              FadeTransition(opacity: animation, child: child),
+                          child: isRunning && isFocusMode
+                              ? Text(
+                                  getMotivationalText(task['title']),
+                                  key: ValueKey('textOnly-${task['title']}'),
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w600,
+                                    color: yellowTextColor,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                )
+                              : Container(
+                                  key: ValueKey('pill-${task['title']}'),
+                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: purpleCtaColor,
+                                    borderRadius: BorderRadius.circular(30),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Text("🕓 ", style: TextStyle(fontSize: 20)),
+                                      Text(
+                                        "Next Task: ${task['title']}",
+                                        style: const TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w600,
+                                          color: yellowTextColor,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                        ),
+                      );
+                    },
+                  ),
+
+
+
+
+                  // === Main Timer Column ===
                   Column(
                     children: [
                       const SizedBox(height: 20),
@@ -221,38 +324,7 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              // --- Display Selected Task ---
-                              Consumer<TaskProvider>(
-                                builder: (context, taskProvider, _) {
-                                  final selectedTaskTitle = taskProvider.selectedTaskTitle;
-                                  if (selectedTaskTitle == null) return const SizedBox.shrink();
-
-                                  final todayTasks = taskProvider.getTasksForDate(DateTime.now());
-                                  final task = todayTasks.firstWhere(
-                                    (t) => t['title'] == selectedTaskTitle,
-                                    orElse: () => {},
-                                  );
-
-                                  if (task.isEmpty || (task['donePomodoros'] >= task['pomodoros'])) {
-                                    return const SizedBox.shrink();
-                                  }
-
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 16.0),
-                                    child: Text(
-                                      "Next Task: ${task['title']}",
-                                      style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: yellowTextColor,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  );
-                                },
-                              ),
-
-                              // Mode selector
+                              // Mode Selector
                               SizedBox(
                                 height: 40,
                                 width: 150,
@@ -265,16 +337,19 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
 
                                     return PageView.builder(
                                       controller: _modePageController,
-                                      // enable scrolling between modes only when timer is stopped
                                       physics: timer.isRunning
-                                      ? const NeverScrollableScrollPhysics()
-                                      : const PageScrollPhysics(), 
+                                          ? const NeverScrollableScrollPhysics()
+                                          : const PageScrollPhysics(),
                                       itemCount: _modes.length,
                                       onPageChanged: (index) => timer.setMode(index),
                                       itemBuilder: (context, index) {
                                         final distance = (page - index).abs();
-                                        final blurAmount = (distance == 0) ? 0.0 : (distance * 5).clamp(0.0, 5.0);
-                                        final opacity = (distance == 0) ? 1.0 : (1 - (distance * 0.5)).clamp(0.0, 1.0);
+                                        final blurAmount = (distance == 0)
+                                            ? 0.0
+                                            : (distance * 5).clamp(0.0, 5.0);
+                                        final opacity = (distance == 0)
+                                            ? 1.0
+                                            : (1 - (distance * 0.5)).clamp(0.0, 1.0);
 
                                         return Center(
                                           child: Opacity(
@@ -287,11 +362,12 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
                                                 ),
                                                 child: Text(
                                                   _modes[index],
-                                                  style: TextStyle
-                                                  (
+                                                  style: TextStyle(
                                                     fontWeight: FontWeight.w600,
-                                                    color: timer.isRunning ? yellowTextColor : darkAppBackground,
-                                                    fontSize: 25
+                                                    color: timer.isRunning
+                                                        ? yellowTextColor
+                                                        : darkAppBackground,
+                                                    fontSize: 25,
                                                   ),
                                                 ),
                                               ),
@@ -306,7 +382,7 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
 
                               const SizedBox(height: 40),
 
-                              // Timer display
+                              // Timer Display
                               TweenAnimationBuilder<double>(
                                 tween: Tween<double>(
                                   begin: 1.0,
@@ -350,50 +426,44 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
                                 },
                               ),
 
-
-                            if (timer.isRunning)       
-                              // Smooth White Progress Line with margin
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 30),
-                                child: SizedBox(
-                                  height: 8, // total height of the bar
-                                  child: Stack(
-                                    alignment: Alignment.centerLeft,
-                                    children: [
-                                      // Base thin grey line
-                                      Container(
-                                        height: 2,
-                                        decoration: BoxDecoration(
-                                          color: yellowTextColor.withOpacity(0.3),
-                                          borderRadius: BorderRadius.circular(1),
+                              if (timer.isRunning)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 30),
+                                  child: SizedBox(
+                                    height: 8,
+                                    child: Stack(
+                                      alignment: Alignment.centerLeft,
+                                      children: [
+                                        Container(
+                                          height: 2,
+                                          decoration: BoxDecoration(
+                                            color: yellowTextColor.withOpacity(0.3),
+                                            borderRadius: BorderRadius.circular(1),
+                                          ),
                                         ),
-                                      ),
-
-                                      // Animated thicker white line filling as timer progresses
-                                      AnimatedBuilder(
-                                        animation: Provider.of<TimerController>(context),
-                                        builder: (context, child) {
-                                          final progress = timerProgress; // 0.0 -> 1.0
-                                          return Align(
-                                            alignment: Alignment.centerLeft,
-                                            child: FractionallySizedBox(
-                                              widthFactor: progress,
-                                              child: Container(
-                                                height: 4, // thicker than the base line
-                                                decoration: BoxDecoration(
-                                                  color: yellowTextColor,
-                                                  borderRadius: BorderRadius.circular(3),
+                                        AnimatedBuilder(
+                                          animation: Provider.of<TimerController>(context),
+                                          builder: (context, child) {
+                                            final progress = timerProgress;
+                                            return Align(
+                                              alignment: Alignment.centerLeft,
+                                              child: FractionallySizedBox(
+                                                widthFactor: progress,
+                                                child: Container(
+                                                  height: 4,
+                                                  decoration: BoxDecoration(
+                                                    color: yellowTextColor,
+                                                    borderRadius: BorderRadius.circular(3),
+                                                  ),
                                                 ),
                                               ),
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    ],
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ),
-
 
                               const SizedBox(height: 40),
 
@@ -407,22 +477,43 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
                                       onComplete: () async {
                                         final taskProvider = Provider.of<TaskProvider>(context, listen: false);
 
-                                        if (timer.selectedMode == 0) {
+                                        if (timer.selectedMode == 0) { // Focus session finished
                                           final index = _getSelectedTaskIndex(taskProvider);
-                                          if (index != null) {
-                                            // Increment pomodoro and fetch latest task data
-                                            await taskProvider.incrementPomodoro(DateTime.now(), index);
+                                          bool taskJustFinished = false;
 
-                                            // Trigger confetti & finished message if task done
-                                            await _checkTaskCompletion(taskProvider);
+                                          if (index != null) {
+                                            await taskProvider.fetchTasksForDate(DateTime.now());
+                                            final todayTasks = taskProvider.getTasksForDate(DateTime.now());
+                                            final task = todayTasks[index];
+
+                                            // Only increment if task not done
+                                            if ((task['donePomodoros'] ?? 0) < (task['pomodoros'] ?? 0)) {
+                                              await taskProvider.incrementPomodoro(DateTime.now(), index);
+
+                                              // Check if task is now finished
+                                              if ((task['donePomodoros'] ?? 0) + 1 >= (task['pomodoros'] ?? 0)) {
+                                                taskJustFinished = true;
+                                                await _checkTaskCompletion(taskProvider); // show confetti
+                                              }
+                                            }
                                           }
 
-                                          timer.completedFocusSessions++;
-                                          timer.setMode(timer.completedFocusSessions % 4 == 0 ? 2 : 1);
+                                          if (taskJustFinished) {
+                                            // Skip break, go straight to focus
+                                            timer.setMode(0);
+                                          } else {
+                                            // Normal Pomodoro flow
+                                            timer.completedFocusSessions++;
+                                            if (timer.completedFocusSessions % 4 == 0) {
+                                              timer.setMode(2); // Long break every 4 focus sessions
+                                            } else {
+                                              timer.setMode(1); // Short break
+                                            }
+                                          }
+
                                           timer.reset();
-                                          
-                                        } else {
-                                          timer.setMode(0);
+                                        } else { // Break finished
+                                          timer.setMode(0); // Always go back to focus
                                           timer.reset();
                                         }
                                       },
@@ -430,26 +521,22 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
                                   }
                                 },
                                 style: TextButton.styleFrom(
-                                  backgroundColor: timer.isRunning 
-                                                      ? purpleCtaColor : ctaColor,
-                                  
+                                  backgroundColor: timer.isRunning ? purpleCtaColor : ctaColor,
                                   padding: const EdgeInsets.symmetric(horizontal: 35, vertical: 12),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
-                                  minimumSize: const Size(0, 0),
                                 ),
                                 child: Text(
                                   buttonText(timer),
-                                  style: TextStyle
-                                  (
+                                  style: TextStyle(
                                     fontWeight: FontWeight.w600,
                                     fontSize: 17,
-                                    color: timer.isRunning
-                                                ? yellowTextColor
-                                                : Theme.of(context).iconTheme.color,
+                                    color: timer.isRunning ? yellowTextColor : Theme.of(context).iconTheme.color,
                                   ),
-                                  textAlign: TextAlign.center,
                                 ),
                               ),
+
+
+
 
                               SizedBox(
                                 height: 60,
