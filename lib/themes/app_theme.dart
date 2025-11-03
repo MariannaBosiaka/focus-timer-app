@@ -4,15 +4,17 @@ import 'package:flutter/material.dart';
 import 'colors.dart';
 
 class AppTheme {
-  static final ThemeData lightTheme = ThemeData(
+  static final ThemeData theme = ThemeData(
     brightness: Brightness.light,
+    fontFamily: 'Inter',
     scaffoldBackgroundColor: lightAppBackground,
     textTheme: const TextTheme(
       displayLarge: TextStyle(
         color: darkAppBackground,
         fontSize: 72,
         fontWeight: FontWeight.w700,
-        fontFamily: 'Inter',
+        
+        
       ),
       bodyLarge: TextStyle(color: Colors.black),
     ),

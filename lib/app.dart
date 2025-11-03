@@ -22,9 +22,9 @@ class MyApp extends StatelessWidget {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
             title: 'Pomodoro App',
-            themeMode: themeProvider.themeMode,
-            theme: AppTheme.lightTheme,
+            theme: AppTheme.theme,
             home: const TimerPage(),
+            
           );
         },
       ),

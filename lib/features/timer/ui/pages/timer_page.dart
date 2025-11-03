@@ -441,6 +441,7 @@ class _TimerPageState extends State<TimerPage> with TickerProviderStateMixin {
                                   buttonText(timer),
                                   style: TextStyle
                                   (
+                                    fontWeight: FontWeight.w600,
                                     fontSize: 17,
                                     color: timer.isRunning
                                                 ? yellowTextColor
